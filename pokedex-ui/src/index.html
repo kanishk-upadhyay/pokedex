@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokédex</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Digital&display=swap">
+</head>
+
+<body>
+    <h1 class="pokedex-title">Pokédex</h1>
+
+    <div id="pokedex" class="pokedex">
+
+        <div class="left-panel">
+            <div class="top">
+                <div class="camera-lens" id="camera-lens"></div>
+                <div class="indicator-lights">
+                    <div class="light red"></div>
+                    <div class="light yellow"></div>
+                    <div class="light green"></div>
+                </div>
+                <div class="spine"></div>
+            </div>
+            <div class="left-panel-content">
+                <div class="main-screen">
+                    <div id="pokemon-display" class="pokemon-display"></div>
+                </div>
+
+                <div class="controls-area">
+                    <div class="d-pad">
+                        <div class="d-pad-up"></div>
+                        <div class="d-pad-right"></div>
+                        <div class="d-pad-down"></div>
+                        <div class="d-pad-left"></div>
+                        <div class="d-pad-center"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="right-panel-back">
+                <div class="yellow-button" id="yellow-button"></div>
+                <div class="bottom-edge"></div>
+            </div>
+            <div class="right-panel-content">
+                <div class="secondary-screen"></div>
+                <div class="blue-button-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/pokedex.js"></script>
+</body>
+
+</html>
