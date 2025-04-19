@@ -398,6 +398,7 @@ body {
     display: flex;
     margin-bottom: 10px;
     width: 100%;
+    flex-shrink: 0; /* Prevent search area from shrinking */
 }
 
 .pokemon-search-input {
@@ -437,6 +438,7 @@ body {
     border-radius: 5px;
     border: 1px solid #333;
     text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
 /* Add scrollbar styling */
@@ -521,7 +523,6 @@ body {
     background-color: #555;
     transform: scale(0.95);
 }
-
 
 /* Yellow corner triangle */
 .yellow-button {
