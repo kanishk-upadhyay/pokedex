@@ -1,765 +1,755 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
+  /**
+   * PokedexController - manages UI, fetching, caching, and persistence.
+   * This version normalizes all name-based keys to lowercase so name searches work reliably.
+   */
+  class PokedexController {
+    constructor() {
+      this.config = {
+        api: {
+          baseUrl: "https://pokeapi.co/api/v2",
+          minRequestInterval: 50, // polite default
+        },
+        app: {
+          defaultId: 1,
+          maxPreloadPokemon: 20,
+        },
+        cache: {
+          expiration: 7 * 24 * 60 * 60 * 1000,
+          maxSize: 300,
+        },
+        storage: {
+          nameListKey: "pokedex_name_list_v1",
+          nameListTsKey: "pokedex_name_list_ts_v1",
+          nameListTTL: 7 * 24 * 60 * 60 * 1000, // 7 days
+        },
+      };
+
+      this.state = {
+        currentId: this.config.app.defaultId,
+        pokemonCache: new Cache(
+          this.config.cache.maxSize,
+          this.config.cache.expiration,
+        ),
+        pokemonList: [],
+        pokemonNameMap: new Map(), // keys will be lowercase
+        totalPokemon: 0,
+        uiState: {
+          showingFront: true,
+        },
+        lastDisplayedId: null,
+      };
+
+      this.requestQueue = new RequestQueue(this.config.api.minRequestInterval);
+      this.debounceTimeout = null;
+
+      this.init();
+    }
+
+    async init() {
+      window.addEventListener("load", async () => {
+        this.initElements();
+        this.setupBlueButtonGrid();
+        this.initEventListeners();
+        this.initPokedexState();
+
+        // Register service worker (best-effort)
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.register("./sw.js").catch((err) => {
+            console.warn("Service Worker registration failed:", err);
+          });
+        }
+
+        // Load (or restore) pokemon list — ensures name search works
+        await this.loadPokemonList();
+      });
+    }
+
+    initElements() {
+      this.ui = {
+        pokedex: document.querySelector(".pokedex"),
+        yellowButton: document.querySelector(".yellow-button"),
+        cameraLens: document.querySelector(".camera-lens"),
+        mainScreen: document.querySelector(".main-screen"),
+        detailsArea: null,
+        searchInput: null,
+        searchButton: null,
+        autocompleteList: null,
+        autocompleteList: null,
+        blueButtonGrid: document.querySelector(".blue-button-grid"),
+        dPad: {
+          up: document.querySelector(".d-pad-up"),
+          down: document.querySelector(".d-pad-down"),
+          left: document.querySelector(".d-pad-left"),
+          right: document.querySelector(".d-pad-right"),
+          center: document.querySelector(".d-pad-center"),
+        },
+      };
+
+      console.log("ui.pokedex initialized:", this.ui.pokedex);
+
+      const secondary = document.querySelector(".secondary-screen");
+      if (secondary) {
+        secondary.innerHTML = `
+          <div class="pokemon-search-area">
+            <input type="text" class="pokemon-search-input" placeholder="Search Pokémon">
+            <button class="pokemon-search-button">Search</button>
+          </div>
+          <style>
+            @font-face {
+              font-family: "Digital";
+              src: url("./fonts/Digital-Regular.woff2") format("woff2"),
+                   url("./fonts/Digital-Regular.woff") format("woff");
+              font-display: swap;
+            }
+          </style>
+          <div class="pokemon-details-area">Loading Pokédex...</div>
+        `;
+      }
+
+      this.ui.searchInput = document.querySelector(".pokemon-search-input");
+      this.ui.searchButton = document.querySelector(".pokemon-search-button");
+      this.ui.detailsArea = document.querySelector(".pokemon-details-area");
+
+      this.ui.autocompleteList = document.querySelector(".autocomplete-list");
+    }
+
+    setupBlueButtonGrid() {
+      const grid = document.querySelector(".blue-button-grid");
+      if (!grid) return;
+      grid.innerHTML = "";
+      const frag = document.createDocumentFragment();
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].forEach((n) => {
+        const btn = document.createElement("button");
+        btn.className = "blue-button";
+        btn.dataset.value = String(n);
+        frag.appendChild(btn);
+      });
+      grid.appendChild(frag);
+
+      // Delegated handler
+      grid.addEventListener(
+        "click",
+        (e) => {
+          const value = e.target?.dataset?.value;
+          if (!value || !this.ui.searchInput) return;
+          // If input has letters, reset before appending digits
+          if (/[a-zA-Z]/.test(this.ui.searchInput.value))
+            this.ui.searchInput.value = "";
+          this.ui.searchInput.value += value;
+          this.ui.searchInput.focus();
+        },
+        { passive: true },
+      );
+
+      grid.addEventListener(
+        "touchstart",
+        (e) => {
+          const value = e.target?.dataset?.value;
+          if (!value || !this.ui.searchInput) return;
+          if (/[a-zA-Z]/.test(this.ui.searchInput.value))
+            this.ui.searchInput.value = "";
+          this.ui.searchInput.value += value;
+          this.ui.searchInput.focus();
+        },
+        { passive: true },
+      );
+    }
+
+    initEventListeners() {
+      console.log("Setting up event listener for yellow button.");
+      this.ui.yellowButton?.addEventListener("click", () => {
+        console.log("Yellow button clicked. Toggling Pokédex.");
+        this.togglePokedex();
+      });
+
+      console.log("Setting up event listener for camera lens.");
+      this.ui.cameraLens?.addEventListener("click", () => {
+        console.log("Camera lens clicked. Toggling Pokédex.");
+        this.togglePokedex();
+      });
+
+      ["up", "down", "left", "right"].forEach((dir) => {
+        this.ui.dPad[dir]?.addEventListener("click", () =>
+          this.navigatePokemon(dir),
+        );
+      });
+      this.ui.dPad.center?.addEventListener("click", () => {
+        if (this.isPokedexOpen()) this.searchPokemon();
+      });
+
+      document.addEventListener("keydown", (ev) => {
+        if (!this.isPokedexOpen()) return;
+        const map = {
+          ArrowUp: "up",
+          ArrowDown: "down",
+          ArrowLeft: "left",
+          ArrowRight: "right",
+          Enter: "search",
+        };
+        const action = map[ev.key];
+        if (!action) return;
+        if (action === "search") this.searchPokemon();
+        else this.navigatePokemon(action);
+      });
+
+      this.ui.searchButton?.addEventListener("click", () =>
+        this.searchPokemon(),
+      );
+      this.ui.searchButton?.addEventListener(
+        "touchstart",
+        () => this.searchPokemon(),
+        { passive: true },
+      );
+
+      // Debounced input for name searches
+      this.ui.searchInput?.addEventListener("input", () => {
+        clearTimeout(this.debounceTimeout);
+        const value = this.ui.searchInput.value.trim();
+        const isNumeric = /^[0-9]+$/.test(value);
+        if (value.length === 0) {
+          this.showMessage("Enter a Pokémon name or number.");
+          this.clearMainScreen();
+          return;
+        }
+        if (!isNumeric) {
+          this.debounceTimeout = setTimeout(() => {
+            const latest = this.ui.searchInput.value.trim();
+            if (latest.length > 0 && !/^[0-9]+$/.test(latest))
+              this.searchPokemon();
+          }, 150);
+        }
+      });
+
+      this.ui.searchInput?.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") this.searchPokemon();
+      });
+
+      // Reset helpers
+      const resetFlag = () => {};
+      this.ui.searchInput?.addEventListener("click", resetFlag);
+      this.ui.searchInput?.addEventListener("touchstart", resetFlag, {
+        passive: true,
+      });
+    }
+
+    initPokedexState() {
+      if (
+        !this.ui.pokedex.classList.contains("open") &&
+        !this.ui.pokedex.classList.contains("closed")
+      ) {
+        this.ui.pokedex.classList.add("closed");
+      }
+    }
+
+    togglePokedex() {
+      if (!this.ui.pokedex) {
+        console.error("ui.pokedex is not initialized or missing in the DOM.");
+        return;
+      }
+
+      if (this.isPokedexClosed()) {
+        this.ui.pokedex.classList.remove("closed");
+        this.ui.pokedex.classList.add("open");
+        console.log("Pokédex opened.");
+        if (this.state.pokemonList.length > 0) {
+          const randomIndex = Math.floor(
+            Math.random() * this.state.pokemonList.length,
+          );
+          const randomPokemon = this.state.pokemonList[randomIndex];
+          this.fetchPokemonById(randomPokemon.id).catch((err) => {
+            console.error("Failed to fetch random Pokémon:", err);
+          });
+        } else {
+          console.warn("Pokémon list is empty. Cannot fetch random Pokémon.");
+        }
+      } else {
+        this.ui.pokedex.classList.remove("open");
+        this.ui.pokedex.classList.add("closed");
+        console.log("Pokédex closed.");
+      }
+    }
+
+    isPokedexOpen() {
+      return this.ui.pokedex.classList.contains("open");
+    }
+    isPokedexClosed() {
+      return this.ui.pokedex.classList.contains("closed");
+    }
+
+    async navigatePokemon(direction) {
+      if (this.state.isNavigating) return;
+      this.state.isNavigating = true;
+
+      const currentIndex = this.state.pokemonList.findIndex(
+        (p) => p.id === this.state.currentId,
+      );
+      if (currentIndex === -1) {
+        this.state.isNavigating = false;
+        return;
+      }
+
+      let nextIndex;
+      switch (direction) {
+        case "up":
+          nextIndex = Math.max(0, currentIndex - 10);
+          break;
+        case "down":
+          nextIndex = Math.min(
+            this.state.pokemonList.length - 1,
+            currentIndex + 10,
+          );
+          break;
+        case "left":
+          nextIndex = Math.max(0, currentIndex - 1);
+          break;
+        case "right":
+          nextIndex = Math.min(
+            this.state.pokemonList.length - 1,
+            currentIndex + 1,
+          );
+          break;
+        default:
+          nextIndex = currentIndex;
+      }
+
+      if (nextIndex !== currentIndex) {
+        const nextPokemon = this.state.pokemonList[nextIndex];
+        try {
+          await this.fetchPokemonById(nextPokemon.id);
+        } catch (err) {
+          console.error("Navigation failed:", err);
+          this.showError("Navigation failed. Try another direction.");
+        }
+      }
+
+      this.state.isNavigating = false;
+    }
+
     /**
-     * PokedexController - Manages the entire Pokédex application
+     * loadPokemonList tries localStorage (TTL) first; if not present, fetch the entire list,
+     * persist the list (name + id) and populate the in-memory structures. Names are stored lowercased.
      */
-    class PokedexController {
-        constructor() {
-            // Combined configuration object for all settings
-            this.config = {
-                // API settings
-                api: {
-                    baseUrl: 'https://pokeapi.co/api/v2',
-                    batchSize: 100,
-                    minRequestInterval: 20 // Further reduced for faster requests
-                },
-                // Application settings
-                app: {
-                    defaultId: 1,
-                    maxPreloadPokemon: 20 // Increased preloading count
-                },
-                // Cache settings
-                cache: {
-                    expiration: 7 * 24 * 60 * 60 * 1000,
-                    maxSize: 300 // Increased cache size
-                }
-            };
-            // Application state (simplified)
-            this.state = {
-                currentId: this.config.app.defaultId,
-                isNavigating: false,
-                pokemonCache: new Cache(this.config.cache.maxSize, this.config.cache.expiration), // Optimized cache
-                pokemonList: [],
-                pokemonNameMap: new Map(), // Add Map for fast name lookup
-                cacheQueue: [],
-                totalPokemon: 1025,
-                uiState: {
-                    showingFront: true,
-                    lastInputWasButton: false
-                }
-            };
+    async loadPokemonList() {
+      const sk = this.config.storage.nameListKey;
+      const stk = this.config.storage.nameListTsKey;
+      const ttl = this.config.storage.nameListTTL;
 
-            // API request queue
-            this.requestQueue = new RequestQueue(this.config.api.minRequestInterval); // Optimized request queue
+      this.showLoading("Loading Pokédex database...");
 
-            // Add this to your constructor
-            this.debounceTimeout = null;
+      try {
+        const countData = await this.requestQueue.enqueue(
+          `${this.config.api.baseUrl}/pokemon?limit=1`,
+        );
+        const apiCount = countData.count;
 
-            this.init();
+        const raw = localStorage.getItem(sk);
+        const tsRaw = localStorage.getItem(stk);
+        const ts = tsRaw ? parseInt(tsRaw, 10) : 0;
+        if (raw && ts && Date.now() - ts < ttl) {
+          const persisted = JSON.parse(raw);
+          if (persisted.length === apiCount) {
+            this.state.pokemonList = persisted;
+            this.state.pokemonNameMap = new Map(
+              persisted.map((p) => [String(p.name).toLowerCase(), p.id]),
+            );
+            this.state.totalPokemon = apiCount; // Set totalPokemon only when using cache
+            this.showMessage("Pokédex loaded from local cache.");
+            return;
+          }
         }
+      } catch (err) {
+        console.warn("Failed to load from cache, will fetch from API.", err);
+      }
 
-        /**
-         * Initialize the application
-         */
-        async init() {
-            this.initElements();
-            this.initEventListeners();
-            this.initPokedexState();
-            // Load the full list on initialization
-            await this.loadPokemonList();
-        }
+      // If we reach here, we fetch from API
+      try {
+        this.state.pokemonList = [];
+        this.state.pokemonNameMap = new Map();
+        this.state.totalPokemon = 0; // Reset totalPokemon before fetching
+        let url = `${this.config.api.baseUrl}/pokemon?limit=100`;
 
-        /**
-         * Initialize UI elements and references
-         */
-        initElements() {
-            // Main UI elements
-            this.ui = {
-                yellowButton: document.querySelector('.yellow-button'),
-                cameraLens: document.querySelector('.camera-lens'),
-                pokedex: document.querySelector('.pokedex'),
-                mainScreen: document.querySelector('.main-screen'),
-                dPad: {
-                    up: document.querySelector('.d-pad-up'),
-                    down: document.querySelector('.d-pad-down'),
-                    left: document.querySelector('.d-pad-left'),
-                    right: document.querySelector('.d-pad-right'),
-                    center: document.querySelector('.d-pad-center')
-                }
-            };
-
-            // Setup secondary screen
-            const secondaryScreen = document.querySelector('.secondary-screen');
-            if (secondaryScreen) {
-                secondaryScreen.innerHTML = `
-                    <div class="pokemon-search-area">
-                        <input type="text" class="pokemon-search-input" placeholder="Search Pokémon">
-                        <button class="pokemon-search-button">Search</button>
-                    </div>
-                    <div class="pokemon-details-area">
-                        Loading Pokédex data... <br> Please wait while we prepare the database.
-                    </div>
-                `;
+        while (url) {
+          const data = await this.requestQueue.enqueue(url);
+          data.results.forEach((r) => {
+            const parts = r.url.split("/");
+            const id = parseInt(parts[parts.length - 2], 10);
+            if (!isNaN(id)) {
+              const name = r.name;
+              this.state.pokemonList.push({ name, id });
+              this.state.pokemonNameMap.set(String(name).toLowerCase(), id);
             }
-
-            // Setup blue button grid
-            this.setupBlueButtonGrid();
-
-            // Get additional elements after creation
-            this.ui.searchInput = document.querySelector('.pokemon-search-input');
-            this.ui.searchButton = document.querySelector('.pokemon-search-button');
-            this.ui.detailsArea = document.querySelector('.pokemon-details-area');
-            this.ui.blueButtons = document.querySelectorAll('.blue-button');
+          });
+          url = data.next;
         }
 
-        /**
-         * Set up the blue button grid UI
-         */
-        setupBlueButtonGrid() {
-            const grid = document.querySelector('.blue-button-grid');
-            if (!grid) return;
+        this.state.totalPokemon = this.state.pokemonList.length;
 
-            grid.innerHTML = '';
+        localStorage.setItem(sk, JSON.stringify(this.state.pokemonList));
+        localStorage.setItem(stk, String(Date.now()));
 
-            // First row: digits 1-5
-            for (let i = 1; i <= 5; i++) {
-                const button = document.createElement('button');
-                button.className = 'blue-button';
-                button.dataset.value = i;
-                grid.appendChild(button);
-            }
+        this.showMessage("Pokédex database ready.");
+      } catch (err) {
+        console.error("Error loading pokemon list from API:", err);
+        this.showError("Error loading Pokédex database. Try refreshing.");
+      }
+    }
 
-            // Second row: digits 6-9, then 0
-            const secondRowNumbers = [6, 7, 8, 9, 0];
-            secondRowNumbers.forEach(num => {
-                const button = document.createElement('button');
-                button.className = 'blue-button';
-                button.dataset.value = num;
-                grid.appendChild(button);
-            });
+    async fetchPokemonById(id) {
+      try {
+        this.showLoading("Loading...");
+        const pokemon = await this.getPokemonData(id);
+        this.state.currentId = pokemon.id;
+        if (this.ui.searchInput) this.ui.searchInput.value = pokemon.name;
+        await this.displayPokemon(pokemon);
+        this.preloadAdjacentPokemon(id);
+      } catch (err) {
+        console.error("Error fetching pokemon", err);
+        this.showError(`Error loading Pokemon #${id}.`);
+        this.clearMainScreen();
+        throw err;
+      }
+    }
+
+    /**
+     * getPokemonData accepts number or name. When name is used, it is normalized to lowercase
+     * for caching and for storage in the name cache.
+     */
+    async getPokemonData(idOrName) {
+      const isNumber =
+        typeof idOrName === "number" || /^[0-9]+$/.test(String(idOrName));
+      const key = isNumber
+        ? Number(idOrName)
+        : `name_${String(idOrName).toLowerCase()}`;
+
+      const cached = this.state.pokemonCache.get(key);
+      if (cached) {
+        if (!isNumber && typeof idOrName === "string")
+          this.state.currentId = cached.id;
+        return cached;
+      }
+
+      const url = `${this.config.api.baseUrl}/pokemon/${idOrName}`;
+      try {
+        const data = await this.requestQueue.enqueue(url);
+
+        // species (cached separately)
+        if (data.species?.url) {
+          const speciesId = data.species.url.split("/").slice(-2, -1)[0];
+          const speciesKey = `species_${speciesId}`;
+          let species = this.state.pokemonCache.get(speciesKey);
+          if (!species) {
+            species = await this.requestQueue.enqueue(data.species.url);
+            this.state.pokemonCache.set(speciesKey, species);
+          }
+          data.speciesData = species;
         }
 
-        /**
-         * Initialize all event listeners
-         */
-        initEventListeners() {
-            // Main buttons
-            this.ui.yellowButton?.addEventListener('click', () => this.togglePokedex());
-            this.ui.cameraLens?.addEventListener('click', () => this.togglePokedex());
-
-            // D-pad controls
-            const { dPad } = this.ui;
-            const directions = ['up', 'down', 'left', 'right'];
-
-            directions.forEach(dir => {
-                dPad[dir]?.addEventListener('click', () => this.navigatePokemon(dir));
-            });
-
-            // Center button for search
-            dPad.center?.addEventListener('click', () => {
-                if (this.isPokedexOpen()) this.searchPokemon();
-            });
-
-            // Keyboard navigation
-            document.addEventListener('keydown', (event) => {
-                if (!this.isPokedexOpen()) return;
-
-                const keyMap = {
-                    'ArrowUp': 'up',
-                    'ArrowDown': 'down',
-                    'ArrowLeft': 'left',
-                    'ArrowRight': 'right',
-                    'Enter': 'search'
-                };
-
-                const action = keyMap[event.key];
-                if (!action) return;
-
-                if (action === 'search') {
-                    this.searchPokemon();
-                } else {
-                    this.navigatePokemon(action);
-                }
-            });
-
-            // Search functionality
-            this.ui.searchButton?.addEventListener('click', () => this.searchPokemon());
-            this.ui.searchButton?.addEventListener('touchstart', () => this.searchPokemon(), { passive: true });
-
-            this.ui.searchInput?.addEventListener('input', () => {
-                clearTimeout(this.debounceTimeout);
-                const currentValue = this.ui.searchInput.value.trim();
-
-                // Check if the input is purely numeric OR empty
-                const isNumeric = /^[0-9]+$/.test(currentValue);
-                const isEmpty = currentValue.length === 0;
-
-                // Only trigger debounced search if the input is NOT purely numeric and NOT empty
-                if (!isNumeric && !isEmpty) {
-                    this.debounceTimeout = setTimeout(() => {
-                        // Re-check value inside timeout in case it changed rapidly
-                        const latestValue = this.ui.searchInput.value.trim();
-                        const latestIsNumeric = /^[0-9]+$/.test(latestValue);
-                        if (!latestIsNumeric && latestValue.length > 0) {
-                            this.searchPokemon();
-                        }
-                    }, 100); // Debounce time for name search
-                } else if (isEmpty) {
-                    // Optional: Clear results or show default message if input is cleared
-                    this.showMessage('Enter a Pokémon name or number.');
-                    this.clearMainScreen();
-                }
-                // If it IS numeric, do nothing on input - wait for Enter/button press
-            });
-
-            this.ui.searchInput?.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this.searchPokemon(); // Handles Enter for both names and numbers
-            });
-
-            // Blue button input handlers
-            this.ui.blueButtons?.forEach(button => {
-                button.addEventListener('click', (e) => {
-                    if (!this.ui.searchInput) return;
-
-                    // Check if search input contains any letters
-                    const hasLetters = /[a-zA-Z]/.test(this.ui.searchInput.value);
-
-                    // Clear input if it contains letters
-                    if (hasLetters) {
-                        this.ui.searchInput.value = '';
-                    }
-
-                    this.ui.searchInput.value += e.target.dataset.value;
-                    this.ui.searchInput.focus();
-                });
-                button.addEventListener('touchstart', (e) => {
-                    if (!this.ui.searchInput) return;
-
-                    // Check if search input contains any letters
-                    const hasLetters = /[a-zA-Z]/.test(this.ui.searchInput.value);
-
-                    // Clear input if it contains letters
-                    if (hasLetters) {
-                        this.ui.searchInput.value = '';
-                    }
-
-                    this.ui.searchInput.value += e.target.dataset.value;
-                    this.ui.searchInput.focus();
-                }, { passive: true });
-            });
-
-            // Reset the button flag when interacting with search input
-            this.ui.searchInput?.addEventListener('input', () => {
-                this.state.uiState.lastInputWasButton = false;
-            });
-
-            // Reset the button flag when clicking d-pad or search button
-            [
-                this.ui.dPad.up,
-                this.ui.dPad.down,
-                this.ui.dPad.left,
-                this.ui.dPad.right,
-                this.ui.dPad.center,
-                this.ui.searchButton
-            ].forEach(element => {
-                element?.addEventListener('click', () => {
-                    this.state.uiState.lastInputWasButton = false;
-                });
-                element?.addEventListener('touchstart', () => {
-                    this.state.uiState.lastInputWasButton = false;
-                }, { passive: true });
-            });
-
-            // Reset the button flag when clicking search input
-            this.ui.searchInput?.addEventListener('click', () => {
-                this.state.uiState.lastInputWasButton = false;
-            });
-            this.ui.searchInput?.addEventListener('touchstart', () => {
-                this.state.uiState.lastInputWasButton = false;
-            }, { passive: true });
+        // evolution chain
+        if (data.speciesData?.evolution_chain?.url) {
+          const chainId = data.speciesData.evolution_chain.url
+            .split("/")
+            .slice(-2, -1)[0];
+          const evoKey = `evolution_${chainId}`;
+          let evo = this.state.pokemonCache.get(evoKey);
+          if (!evo) {
+            evo = await this.requestQueue.enqueue(
+              data.speciesData.evolution_chain.url,
+            );
+            this.state.pokemonCache.set(evoKey, evo);
+          }
+          data.evolutionData = evo;
         }
 
-        /**
-         * Initialize the Pokédex's default state
-         */
-        initPokedexState() {
-            if (!this.ui.pokedex.classList.contains('closed') && !this.ui.pokedex.classList.contains('open')) {
-                this.ui.pokedex.classList.add('closed');
-            }
+        // cache both by numeric id and by normalized name (if searched by name)
+        this.state.pokemonCache.set(data.id, data);
+        const nameKey = `name_${String(data.name).toLowerCase()}`;
+        this.state.pokemonCache.set(nameKey, data);
+
+        // Ensure the name map contains a normalized key
+        if (data.name)
+          this.state.pokemonNameMap.set(
+            String(data.name).toLowerCase(),
+            data.id,
+          );
+
+        return data;
+      } catch (err) {
+        console.error("getPokemonData error:", err);
+        throw err;
+      }
+    }
+
+    async batchFetchPokemon(ids) {
+      const promises = ids.map((id) => this.getPokemonData(id));
+      return Promise.allSettled(promises);
+    }
+
+    async searchPokemon() {
+      if (!this.ui.searchInput) return;
+      const raw = this.ui.searchInput.value.trim();
+      if (!raw) {
+        this.showMessage("Enter a Pokémon name or number.");
+        return;
+      }
+
+      const query = raw.toLowerCase();
+      this.showLoading("Searching...");
+
+      // numeric?
+      if (/^[0-9]+$/.test(query)) {
+        const id = parseInt(query, 10);
+        if (id >= 1 && id <= this.state.totalPokemon) {
+          await this.fetchPokemonById(id);
+        } else {
+          this.showError(`Pokémon #${id} out of range.`);
+          this.clearMainScreen();
         }
+        return;
+      }
 
-        /**
-         * Toggle the Pokédex open/closed state
-         */
-        togglePokedex() {
-            if (this.isPokedexClosed()) {
-                // Open pokedex
-                this.ui.pokedex.classList.remove('closed');
-                this.ui.pokedex.classList.add('open');
+      // prioritize exact match first
+      const exactMatch = this.state.pokemonNameMap.get(query);
+      if (exactMatch) {
+        await this.fetchPokemonById(exactMatch);
+        return;
+      }
 
-                // Load random Pokemon between 1 and 200
-                if (this.state.pokemonList.length > 0) {
-                    this.state.currentId = Math.floor(Math.random() * Math.min(200, this.state.totalPokemon)) + 1;
-                    this.fetchPokemonById(this.state.currentId);
-                }
-            } else {
-                this.ui.pokedex.classList.remove('open');
-                this.ui.pokedex.classList.add('closed');
-            }
-        }
+      // fuzzy name search for partial matches
+      const suggestions = Array.from(this.state.pokemonNameMap.keys())
+        .filter((name) => name.includes(query))
+        .slice(0, 10); // Limit to 10 suggestions
 
-        /**
-         * Check if the Pokédex is open/closed
-         */
-        isPokedexOpen() {
-            return this.ui.pokedex.classList.contains('open');
-        }
-
-        isPokedexClosed() {
-            return this.ui.pokedex.classList.contains('closed');
-        }
-
-        /**
-         * Navigate through Pokémon based on direction
-         */
-        async navigatePokemon(direction) {
-            if (this.state.isNavigating) return;
-
-            this.state.isNavigating = true;
-            const previousId = this.state.currentId;
-
-            try {
-                // Update ID based on direction
-                switch (direction) {
-                    case 'up': this.state.currentId += 10; break;
-                    case 'right': this.state.currentId += 1; break;
-                    case 'down': this.state.currentId = Math.max(1, this.state.currentId - 10); break;
-                    case 'left': this.state.currentId = Math.max(1, this.state.currentId - 1); break;
-                }
-
-                // Keep ID within bounds
-                this.state.currentId = Math.max(1, Math.min(this.state.currentId, this.state.totalPokemon));
-
-                // Fetch the Pokemon
-                await this.fetchPokemonById(this.state.currentId);
-            } catch (error) {
-                console.error('Navigation failed:', error);
-                this.state.currentId = previousId;
-                this.showError(`Navigation failed. Try another direction.`);
-            } finally {
-                this.state.isNavigating = false;
-            }
-        }
-
-        /**
-         * Load the Pokemon list on startup (Fetch ALL names/IDs)
-         */
-        async loadPokemonList() {
-            try {
-                this.showLoading('Loading Pokédex database (this may take a moment)...'); // Updated message
-
-                // First, get the total count
-                const countData = await this.requestQueue.enqueue(`${this.config.api.baseUrl}/pokemon?limit=1`);
-                this.state.totalPokemon = countData.count;
-
-                // Now fetch the entire list
-                const fullListData = await this.requestQueue.enqueue(`${this.config.api.baseUrl}/pokemon?limit=${this.state.totalPokemon}`);
-
-                // Populate both list and map
-                fullListData.results.forEach(pokemon => {
-                    const urlParts = pokemon.url.split('/');
-                    const id = parseInt(urlParts[urlParts.length - 2]);
-                    const name = pokemon.name;
-                    this.state.pokemonList.push({ name, id });
-                    this.state.pokemonNameMap.set(name, id); // Populate map completely
-                });
-
-                this.showMessage('Welcome to Pokédex! <br> Search pokémons via name or number or use D-pad to navigate.');
-
-                // No need for background preloading of the list anymore
-                // If the Pokedex is already open, load the default/random Pokemon
-                if (this.isPokedexOpen()) {
-                    this.fetchPokemonById(this.state.currentId);
-                }
-
-            } catch (error) {
-                console.error('Error loading Pokemon list:', error);
-                this.showError('Error loading Pokédex database. Please refresh the page.');
-            }
-        }
-
-        /**
-         * Fetch Pokémon by ID
-         */
-        async fetchPokemonById(id) {
-            try {
-                this.showLoading('Loading...');
-
-                // Get Pokemon data (from cache or API)
-                const pokemon = await this.getPokemonData(id);
-
-                // Update current ID and search input
-                this.state.currentId = pokemon.id;
-                if (this.ui.searchInput) {
-                    this.ui.searchInput.value = pokemon.name;
-                }
-
-                // Display the Pokémon
-                await this.displayPokemon(pokemon);
-
-                // Preload adjacent Pokémon
-                this.preloadAdjacentPokemon(id);
-            } catch (error) {
-                console.error('Error fetching Pokemon:', error);
-                this.showError(`Error loading Pokemon #${id}. Try another number.`);
-                this.clearMainScreen();
-                throw error;
-            }
-        }
-
-        /**
-         * Get Pokémon data (from cache or API) by ID or Name
-         */
-        async getPokemonData(idOrName) { // Accept both ID and Name
-            // Use ID for cache key if it's a number, otherwise use the name
-            const cacheKey = typeof idOrName === 'number' ? idOrName : `name_${idOrName}`;
-
-            // Check cache first
-            const cachedPokemon = this.state.pokemonCache.get(cacheKey);
-            if (cachedPokemon) {
-                // Ensure the ID is correctly set in the state if fetched by name
-                if (typeof idOrName === 'string') {
-                    this.state.currentId = cachedPokemon.id;
-                }
-                return cachedPokemon;
-            }
-
-            // If not cached, fetch from API using ID or Name
-            const fetchUrl = `${this.config.api.baseUrl}/pokemon/${idOrName}`;
-
-            try {
-                // Fetch basic Pokemon data
-                const pokemon = await this.requestQueue.enqueue(fetchUrl);
-                const actualId = pokemon.id; // Get the ID from the response
-
-                // --- Optimized Species Data Fetching & Caching ---
-                const speciesCacheKey = `species_${actualId}`;
-                let speciesData = this.state.pokemonCache.get(speciesCacheKey);
-
-                if (!speciesData) {
-                    speciesData = await this.requestQueue.enqueue(`${this.config.api.baseUrl}/pokemon-species/${actualId}`);
-                    this.state.pokemonCache.set(speciesCacheKey, speciesData); // Cache species data separately
-                }
-                // --- End Optimization ---
-
-                // Attach species data
-                pokemon.speciesData = speciesData;
-
-                // Fetch evolution chain only if needed and not already cached
-                if (speciesData.evolution_chain?.url) {
-                    const evolutionChainId = speciesData.evolution_chain.url.split('/').slice(-2, -1)[0];
-                    const evolutionCacheKey = `evolution_${evolutionChainId}`;
-                    const cachedEvolution = this.state.pokemonCache.get(evolutionCacheKey);
-
-                    if (cachedEvolution) {
-                        pokemon.evolutionData = cachedEvolution;
-                    } else {
-                        const evolutionData = await this.requestQueue.enqueue(speciesData.evolution_chain.url);
-                        pokemon.evolutionData = evolutionData;
-                        this.state.pokemonCache.set(evolutionCacheKey, evolutionData);
-                    }
-                }
-
-                // Cache the complete data using the original cacheKey (ID or name_Name)
-                // Also cache it by ID if it was fetched by name, for consistency
-                this.state.pokemonCache.set(cacheKey, pokemon);
-                if (typeof idOrName === 'string') {
-                    this.state.pokemonCache.set(actualId, pokemon);
-                }
-
-                return pokemon;
-            } catch (error) {
-                console.error(`Error fetching Pokemon "${idOrName}":`, error);
-                throw error; // Re-throw to be handled by the caller (searchPokemon or fetchPokemonById)
-            }
-        }
-
-        /**
-         * Batch fetch Pokémon data by IDs
-         */
-        async batchFetchPokemon(ids) {
-            // Request multiple Pokemon in parallel with limits
-            const promises = ids.map(id => this.getPokemonData(id));
-            return Promise.allSettled(promises);
-        }
-
-        /**
-         * Search for a Pokémon by name or ID
-         */
-        async searchPokemon() {
-            if (!this.ui.searchInput) return;
-
-            const query = this.ui.searchInput.value.toLowerCase().trim();
-            if (!query) {
-                this.showMessage('Please enter a pokemon\'s name or number!');
-                return;
-            }
-
-            this.showLoading('Searching...');
-
-            try {
-                // If query is a number, search by ID
-                if (!isNaN(query)) {
-                    const id = parseInt(query);
-                    if (id >= 1 && id <= this.state.totalPokemon) {
-                        await this.fetchPokemonById(id);
-                    } else {
-                        this.showError(`Pokémon #${id} is out of range (1-${this.state.totalPokemon}).`);
-                        this.clearMainScreen();
-                    }
-                    return; // Exit after handling numeric search
-                }
-
-                // Search by name using the map (now complete)
-                const foundId = this.state.pokemonNameMap.get(query);
-                if (foundId) {
-                    await this.fetchPokemonById(foundId);
-                } else {
-                    // Name not found in the complete map
-                    this.showError('Pokémon not found. Check the spelling.');
-                    this.clearMainScreen();
-                }
-            } catch (error) {
-                // Catch errors from fetchPokemonById or other unexpected issues
-                console.error('Error during search:', error);
-                this.showError('An error occurred during search.');
-                this.clearMainScreen();
-            }
-        }
-
-        /**
-         * Display Pokémon data
-         */
-        async displayPokemon(pokemon) {
-            if (!this.ui.mainScreen || !this.ui.detailsArea) return;
-
-            // Display Pokemon image
-            this.ui.mainScreen.innerHTML = `
-                <img src="${pokemon.sprites.front_default || 'placeholder.png'}" 
-                     alt="${pokemon.name}" class="pokemon-image fullscreen">
+      if (suggestions.length > 0) {
+        this.ui.detailsArea.innerHTML = `
+              <p>Suggestions:</p>
+              <ul>${suggestions.map((name) => `<li>${name}</li>`).join("")}</ul>
             `;
+        this.clearMainScreen();
+      } else {
+        this.showError("Pokémon not found. Check spelling.");
+        this.clearMainScreen();
+      }
+    }
+    async displayPokemon(pokemon) {
+      console.log("Displaying Pokémon details:", pokemon);
+      if (!this.ui.mainScreen || !this.ui.detailsArea) {
+        console.error("Main screen or details area not initialized.");
+        return;
+      }
+      if (this.state.lastDisplayedId === pokemon.id) {
+        console.log("Pokémon already displayed:", pokemon.id);
+        return;
+      }
+      this.state.lastDisplayedId = pokemon.id;
 
-            // Setup sprite toggling
-            const pokemonImage = this.ui.mainScreen.querySelector('.pokemon-image');
-            if (pokemonImage && pokemon.sprites.back_default) {
-                this.state.uiState.showingFront = true;
+      // image
+      const img = document.createElement("img");
+      img.className = "pokemon-image fullscreen";
+      img.alt = pokemon.name || "";
+      img.src = pokemon.sprites?.front_default || "placeholder.png";
+      this.ui.mainScreen.innerHTML = "";
+      this.ui.mainScreen.appendChild(img);
 
-                // Toggle sprites on click
-                pokemonImage.addEventListener('click', () => {
-                    if (this.state.uiState.showingFront) {
-                        pokemonImage.src = pokemon.sprites.back_default;
-                    } else {
-                        pokemonImage.src = pokemon.sprites.front_default || 'placeholder.png';
-                    }
-                    this.state.uiState.showingFront = !this.state.uiState.showingFront;
-                });
-            }
+      if (pokemon.sprites?.back_default) {
+        this.state.uiState.showingFront = true;
+        img.onclick = () => {
+          img.src = this.state.uiState.showingFront
+            ? pokemon.sprites.back_default
+            : pokemon.sprites.front_default || "placeholder.png";
+          this.state.uiState.showingFront = !this.state.uiState.showingFront;
+        };
+      } else {
+        console.warn(`Back sprite not available for ${pokemon.name}.`);
+        img.onclick = null;
+      }
 
-            // Get primary type and create labels
-            const primaryType = pokemon.types[0].type.name;
-            const typeLabels = pokemon.types.map(t =>
-                `<span class="type-chip ${t.type.name}">${t.type.name}</span>`
-            ).join(' ');
+      const primaryType =
+        (pokemon.types &&
+          pokemon.types[0] &&
+          pokemon.types[0].type &&
+          pokemon.types[0].type.name) ||
+        "normal";
+      console.log("Primary type:", primaryType);
+      const typeLabels = (pokemon.types || [])
+        .map(
+          (t) => `<span class="type-chip ${t.type.name}">${t.type.name}</span>`,
+        )
+        .join(" ");
+      const moves = (pokemon.moves || [])
+        .slice(0, 4)
+        .map((m) => m.move.name)
+        .join(", ");
+      const abilities = (pokemon.abilities || [])
+        .map((a) => a.ability.name)
+        .join(", ");
 
-            // Extract data for display
-            const moves = pokemon.moves.slice(0, 4).map(m => m.move.name).join(', ');
-            const abilities = pokemon.abilities.map(a => a.ability.name).join(', ');
+      let pokedexEntry = "No Pokédex entry available.";
+      if (pokemon.speciesData?.flavor_text_entries) {
+        const english = (pokemon.speciesData.flavor_text_entries || []).find(
+          (e) => e.language?.name === "en",
+        );
+        if (english) pokedexEntry = english.flavor_text.replace(/\f/g, " ");
+      }
 
-            // Get Pokédex entry if available
-            let pokedexEntry = 'No Pokédex entry available.';
-            if (pokemon.speciesData && pokemon.speciesData.flavor_text_entries) {
-                const englishEntries = pokemon.speciesData.flavor_text_entries.filter(
-                    entry => entry.language.name === 'en'
-                );
+      let html = `
+        <h3 class="pokemon-name color-${primaryType}">${pokemon.name} <span class="pokemon-id"> - ${pokemon.id}</span></h3>
+        <p class="pokemon-types">Type: ${typeLabels}</p>
+        <p class="pokemon-entry color-${primaryType}">${pokedexEntry}</p>
+        <p class="pokemon-abilities">Abilities: ${abilities}</p>
+        <p class="pokemon-moves">Moves: ${moves}</p>
+      `;
 
-                if (englishEntries.length > 0) {
-                    pokedexEntry = englishEntries[0].flavor_text.replace(/\f/g, ' ');
-                }
-            }
+      if (pokemon.evolutionData) {
+        const ev = this.getEvolutionChain(
+          pokemon.evolutionData.chain,
+          pokemon.name,
+        );
+        if (ev.length > 1)
+          html += `<p class="pokemon-evolutions color-${primaryType}">Evolutions: ${ev.join(" → ")}</p>`;
+      }
 
-            // Display Pokemon details
-            this.ui.detailsArea.innerHTML = `
-                <h3 class="pokemon-name color-${primaryType}">${pokemon.name} <span class="pokemon-id"> - ${pokemon.id}</span></h3>
-                <p class="pokemon-types">Type: ${typeLabels}</p>
-                <p class="pokemon-entry color-${primaryType}">${pokedexEntry}</p>
-                <p class="pokemon-abilities">Abilities: ${abilities}</p>
-                <p class="pokemon-moves">Moves: ${moves}</p>
-            `;
-
-            // Add evolution chain if available
-            if (pokemon.evolutionData) {
-                const evolutions = this.getEvolutionChain(pokemon.evolutionData.chain, pokemon.name);
-
-                if (evolutions.length > 1) {
-                    this.ui.detailsArea.innerHTML += `
-                        <p class="pokemon-evolutions color-${primaryType}">Evolutions: ${evolutions.join(' → ')}</p>
-                    `;
-                }
-            }
-        }
-
-        /**
-         * Get evolution chain from data
-         */
-        getEvolutionChain(chain, currentPokemonName) {
-            // Format the current evolution name with highlighting
-            const formatEvolutionName = (name) => {
-                if (name.toLowerCase() === currentPokemonName.toLowerCase()) {
-                    return `<span class="current-evolution">${name}</span>`;
-                }
-                return name;
-            };
-
-            const evolutions = [formatEvolutionName(chain.species.name)];
-
-            if (chain.evolves_to && chain.evolves_to.length > 0) {
-                evolutions.push(...this.getEvolutionChain(chain.evolves_to[0], currentPokemonName));
-            }
-
-            return evolutions;
-        }
-
-        /**
-         * Preload adjacent Pokémon data
-         */
-        preloadAdjacentPokemon(currentId) {
-            // Use setTimeout to avoid blocking the main thread immediately after display
-            setTimeout(async () => {
-                // Prioritize immediate navigation targets
-                const potentialIds = [
-                    currentId + 1,   // right
-                    currentId - 1,   // left
-                    currentId + 10,  // up
-                    currentId - 10   // down
-                ];
-
-                // Filter valid IDs within range and not already cached
-                const idsToPreload = potentialIds.filter(id =>
-                    id > 0 &&
-                    id <= this.state.totalPokemon &&
-                    !this.state.pokemonCache.get(id) // Check cache before adding
-                );
-
-                // Limit the number of parallel preloads
-                const limitedIds = idsToPreload.slice(0, this.config.app.maxPreloadPokemon);
-
-                if (limitedIds.length > 0) {
-                    // Use batchFetchPokemon for parallel fetching
-                    // We don't need the results here, just trigger the fetch/cache
-                    // Use Promise.allSettled to ignore individual errors during preload
-                    await Promise.allSettled(limitedIds.map(id => this.getPokemonData(id)));
-                    // console.log(`Preloaded data for IDs: ${limitedIds.join(', ')}`); // Optional: for debugging
-                }
-            }, 0); // Immediate adjacent preload
-        }
-
-        // ----- UI Helper Methods -----
-
-        showLoading(message) {
-            this.ui.detailsArea.innerHTML = message;
-            this.ui.mainScreen.innerHTML = '<div class="loading">Loading...</div>';
-        }
-
-        showMessage(message) {
-            this.ui.detailsArea.innerHTML = message;
-        }
-
-        showError(message) {
-            this.ui.detailsArea.innerHTML = message;
-        }
-
-        clearMainScreen() {
-            this.ui.mainScreen.innerHTML = '';
-        }
+      this.ui.detailsArea.innerHTML = html;
     }
 
-    // Add enhanced caching mechanism
-    class Cache {
-        constructor(maxSize = 200, expiryTime = 7 * 24 * 60 * 60 * 1000) {
-            this.maxSize = maxSize;
-            this.expiryTime = expiryTime;
-            this.cache = new Map();
-            this.lruQueue = [];
-        }
-
-        set(key, value) {
-            const entry = { value, timestamp: Date.now() };
-            this.cache.set(key, entry);
-            this.updateLRU(key);
-            this.prune();
-        }
-
-        get(key) {
-            const entry = this.cache.get(key);
-            if (!entry) return null;
-            if (this.isExpired(entry)) {
-                this.cache.delete(key);
-                return null;
-            }
-            this.updateLRU(key);
-            return entry.value;
-        }
-
-        isExpired(entry) {
-            return Date.now() - entry.timestamp > this.expiryTime;
-        }
-
-        updateLRU(key) {
-            const index = this.lruQueue.indexOf(key);
-            if (index > -1) this.lruQueue.splice(index, 1);
-            this.lruQueue.push(key);
-        }
-
-        prune() {
-            while (this.cache.size > this.maxSize) {
-                const oldest = this.lruQueue.shift();
-                this.cache.delete(oldest);
-            }
-        }
+    getEvolutionChain(chain, currentName) {
+      const fmt = (n) =>
+        String(n).toLowerCase() === String(currentName).toLowerCase()
+          ? `<span class="current-evolution">${n}</span>`
+          : n;
+      const out = [fmt(chain.species.name)];
+      if (chain.evolves_to && chain.evolves_to.length > 0) {
+        out.push(...this.getEvolutionChain(chain.evolves_to[0], currentName));
+      }
+      return out;
     }
 
-    // Add request queue for API rate limiting
-    class RequestQueue {
-        constructor(minInterval = 100) {
-            this.queue = [];
-            this.processing = false;
-            this.lastRequest = 0;
-            this.minInterval = minInterval;
+    preloadAdjacentPokemon(currentId) {
+      setTimeout(async () => {
+        const currentIndex = this.state.pokemonList.findIndex(
+          (p) => p.id === currentId,
+        );
+        if (currentIndex === -1) return;
+
+        const potentialIndices = [
+          currentIndex + 1,
+          currentIndex - 1,
+          currentIndex + 10,
+          currentIndex - 10,
+        ];
+
+        const idsToPreload = potentialIndices
+          .filter(
+            (index) => index >= 0 && index < this.state.pokemonList.length,
+          )
+          .map((index) => this.state.pokemonList[index].id)
+          .filter((id) => !this.state.pokemonCache.get(id));
+
+        const limited = idsToPreload.slice(
+          0,
+          this.config.app.maxPreloadPokemon,
+        );
+        if (limited.length) {
+          await Promise.allSettled(
+            limited.map((id) => this.getPokemonData(id)),
+          );
         }
-
-        async enqueue(url) {
-            return new Promise((resolve, reject) => {
-                this.queue.push({ url, resolve, reject });
-                if (!this.processing) this.process();
-            });
-        }
-
-        async process() {
-            if (this.queue.length === 0) {
-                this.processing = false;
-                return;
-            }
-
-            this.processing = true;
-            const request = this.queue.shift();
-            const now = Date.now();
-            const wait = Math.max(0, this.lastRequest + this.minInterval - now);
-
-            if (wait > 0) await new Promise(r => setTimeout(r, wait));
-
-            try {
-                const response = await fetch(request.url);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-                request.resolve(data);
-            } catch (error) {
-                request.reject(error);
-            } finally {
-                this.lastRequest = Date.now();
-                setTimeout(() => this.process(), 0);
-            }
-        }
+      }, 0);
     }
 
-    // Initialize the Pokedex application
-    const pokedex = new PokedexController();
+    // UI helpers
+    showLoading(msg) {
+      this.state.lastDisplayedId = null;
+      if (this.ui.detailsArea) this.ui.detailsArea.innerHTML = msg;
+      if (this.ui.mainScreen)
+        this.ui.mainScreen.innerHTML = '<div class="loading">Loading...</div>';
+    }
+    showMessage(msg) {
+      this.state.lastDisplayedId = null;
+      if (this.ui.detailsArea) this.ui.detailsArea.innerHTML = msg;
+    }
+    showError(msg) {
+      this.state.lastDisplayedId = null;
+      if (this.ui.detailsArea) this.ui.detailsArea.innerHTML = msg;
+    }
+    clearMainScreen() {
+      this.state.lastDisplayedId = null;
+      if (this.ui.mainScreen) this.ui.mainScreen.innerHTML = "";
+    }
+  }
+
+  // Simple in-memory LRU-ish cache with expiry
+  class Cache {
+    constructor(maxSize = 200, expiry = 7 * 24 * 60 * 60 * 1000) {
+      this.maxSize = maxSize;
+      this.expiry = expiry;
+      this.map = new Map();
+      this.lru = [];
+    }
+    set(key, value) {
+      this.map.set(key, { value, ts: Date.now() });
+      const i = this.lru.indexOf(key);
+      if (i > -1) this.lru.splice(i, 1);
+      this.lru.push(key);
+      while (this.map.size > this.maxSize) {
+        const oldest = this.lru.shift();
+        if (oldest !== undefined) this.map.delete(oldest);
+      }
+    }
+    get(key) {
+      const entry = this.map.get(key);
+      if (!entry) return null;
+      if (Date.now() - entry.ts > this.expiry) {
+        this.map.delete(key);
+        const i = this.lru.indexOf(key);
+        if (i > -1) this.lru.splice(i, 1);
+        return null;
+      }
+      const i = this.lru.indexOf(key);
+      if (i > -1) this.lru.splice(i, 1);
+      this.lru.push(key);
+      return entry.value;
+    }
+  }
+
+  // Simple request queue to space API calls
+  class RequestQueue {
+    constructor(minInterval = 100) {
+      this.queue = [];
+      this.processing = false;
+      this.last = 0;
+      this.minInterval = minInterval;
+    }
+    enqueue(url) {
+      return new Promise((resolve, reject) => {
+        this.queue.push({ url, resolve, reject });
+        if (!this.processing) this._process();
+      });
+    }
+    async _process() {
+      if (this.queue.length === 0) {
+        this.processing = false;
+        return;
+      }
+      this.processing = true;
+      const item = this.queue.shift();
+      const now = Date.now();
+      const wait = Math.max(0, this.last + this.minInterval - now);
+      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+      try {
+        const resp = await fetch(item.url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        item.resolve(data);
+      } catch (err) {
+        item.reject(err);
+      } finally {
+        this.last = Date.now();
+        setTimeout(() => this._process(), 0);
+      }
+    }
+  }
+
+  // Start the app
+  new PokedexController();
 });
