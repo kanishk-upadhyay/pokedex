@@ -1,10 +1,8 @@
 # Pokédex Web Application
 
-![Pokéball](pokeball.svg)
-
 A modern, interactive, and feature-rich Pokédex web application built with vanilla HTML, CSS, and JavaScript. It provides a fast and engaging experience for browsing and searching for your favorite Pokémon, complete with offline capabilities.
 
-Screenshot: [Pokédex](pokedex.png)
+Screenshot: ![Pokédex](pokedex.png)
 ---
 
 ## Key Features
