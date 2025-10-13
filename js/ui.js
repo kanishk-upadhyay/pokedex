@@ -420,8 +420,8 @@ class UIController {
     // Build details using element builders instead of string templates
     const primaryType = this._getPrimaryType(pokemon);
 
-    // The name element should keep its CSS-controlled color (ivory).
-    // We DO NOT add the color-<type> class to the name element so JS won't override the color.
+    // The name element has a glass-like background that may be modified by JS.
+    // The text color will be set by JS based on the primary type.
     const nameEl = el(
       "h3",
       { class: "pokemon-name" },
@@ -429,19 +429,33 @@ class UIController {
       el("span", { class: "pokemon-id" }, ` - ${pokemon.id}`),
     );
 
-    // Apply a type-based text shadow (glow) using CSS variable directly.
-    // This approach is much simpler and more efficient than the previous color parsing logic.
+    // Apply primary color for text fill and secondary color for text stroke if present
     try {
-      const cssVarName = `--color-${primaryType}`;
+      // Use primary type color for text fill
+      const fillCssVarName = `--color-${primaryType}`;
+      nameEl.style.webkitTextFillColor = `var(${fillCssVarName}, ivory)`;
+      // Also set regular color as fallback
+      nameEl.style.color = `var(${fillCssVarName}, ivory)`;
       
-      // Use the CSS variable directly - no complex parsing needed
-      nameEl.style.textShadow = `0 0 8px var(${cssVarName}, ivory), 
-                                   0 0 18px var(${cssVarName}, ivory), 
-                                   0 0 30px var(${cssVarName}, ivory)`;
+      // Remove text shadow
+      nameEl.style.textShadow = 'none';
+      
+      // If secondary type is present, apply it as text stroke
+      if (pokemon.types && pokemon.types.length > 1) {
+        const secondaryType = pokemon.types[1].type.name;
+        const strokeCssVarName = `--color-${secondaryType}`;
+        // Apply text stroke using -webkit-text-stroke for browser compatibility
+        nameEl.style.webkitTextStroke = `1px var(${strokeCssVarName}, #ccc)`;
+        nameEl.style.webkitTextStrokeWidth = '1px';
+        nameEl.style.webkitTextStrokeColor = `var(${strokeCssVarName}, #ccc)`;
+      } else {
+        // For single-type Pokémon, no text stroke for cleaner look
+        nameEl.style.webkitTextStroke = 'none';
+      }
     } catch (err) {
       // On unexpected errors, don't modify nameEl styles so CSS remains authoritative.
       // eslint-disable-next-line no-console
-      console.error("Failed to apply type-based text shadow:", err);
+      console.error("Failed to apply color styling:", err);
     }
 
     const typeChips = (pokemon.types || []).map((t) =>
@@ -482,7 +496,7 @@ class UIController {
     if (evolutionChain.length > 1) {
       const evolutionsEl = el(
         "p",
-        { class: `pokemon-evolutions color-${primaryType}` },
+        { class: "pokemon-evolutions" },  // Remove the color class from parent
         el("strong", {}, "Evolutions: "),
       );
 
@@ -585,9 +599,25 @@ class UIController {
       const isCurrent =
         String(name).toLowerCase() === String(currentName).toLowerCase();
 
+      // For the current evolution, apply primary type color
+      let elementClass = "";
+      let elementStyle = {};
+      if (isCurrent) {
+        elementClass = "current-evolution";
+        // Get primary type from the pokemon object
+        const primaryType = (pokemon.types && pokemon.types[0] && pokemon.types[0].type && pokemon.types[0].type.name) || "normal";
+        elementStyle = { 
+          color: `var(--color-${primaryType}, ivory)`,
+          fontWeight: 'bold'
+        };
+      }
+
       const node = el(
         "span",
-        { class: isCurrent ? "current-evolution" : "" },
+        { 
+          class: elementClass,
+          style: elementStyle
+        },
         name,
       );
 
