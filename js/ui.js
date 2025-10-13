@@ -97,27 +97,37 @@ class UIController {
 
     grid.innerHTML = "";
     const frag = document.createDocumentFragment();
+
     [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].forEach((n) => {
       const btn = document.createElement("button");
       btn.className = "blue-button";
       btn.dataset.value = String(n);
+      
+
+      
+      const handleButtonInput = (e) => {
+        e.preventDefault();
+        
+        if (!this.elements.searchInput) return;
+
+        // If search input contains letters, clear it first
+        if (/[a-zA-Z]/.test(this.elements.searchInput.value)) {
+          this.elements.searchInput.value = "";
+        }
+        
+        // Add the number to the search input
+        this.elements.searchInput.value += String(n);
+        this.elements.searchInput.focus();
+      };
+      
+      // Use only click event - it handles both mouse clicks and touch interactions properly
+      // On touch devices, the click event fires after touchend, and modern browsers
+      // handle the 300ms delay and duplicates properly
+      btn.addEventListener("click", handleButtonInput);
+      
       frag.appendChild(btn);
     });
     grid.appendChild(frag);
-
-    const handleButtonPress = (e) => {
-      const value = e.target?.dataset?.value;
-      if (!value || !this.elements.searchInput) return;
-
-      if (/[a-zA-Z]/.test(this.elements.searchInput.value)) {
-        this.elements.searchInput.value = "";
-      }
-      this.elements.searchInput.value += value;
-      this.elements.searchInput.focus();
-    };
-
-    grid.addEventListener("click", handleButtonPress, { passive: true });
-    grid.addEventListener("touchstart", handleButtonPress, { passive: true });
   }
 
   /**
