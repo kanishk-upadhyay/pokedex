@@ -890,3 +890,75 @@ body {
     font-size: 0.8em;
     color: #aaa;
 }
+
+/* Suggestion container and buttons */
+.suggestions-container {
+    width: 100%;
+}
+
+.suggestions-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.suggestion-item {
+    margin: 0;
+    padding: 0;
+}
+
+.suggestion-button {
+    width: 100%;
+    padding: 10px 15px;
+    text-align: left;
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    color: #d895da;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
+    min-height: 40px; /* Ensure minimum touch-friendly size */
+}
+
+.suggestion-button:hover {
+    background-color: #3a3a3a;
+    border-color: #666;
+}
+
+.suggestion-button:active {
+    background-color: #4a4a4a;
+    transform: scale(0.98);
+}
+
+/* Responsive grid layout for suggestions on larger screens */
+@media (min-width: 480px) {
+    .suggestions-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+    }
+    
+    .suggestion-button {
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
+/* Responsive adjustments for suggestion buttons */
+@media (max-width: 620px) {
+    .suggestion-button {
+        font-size: 13px;
+        padding: 8px 12px;
+        min-height: 36px;
+    }
+}

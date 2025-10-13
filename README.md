@@ -1,64 +1,72 @@
-# Pokedex Web Application
+# Pokédex Web Application
 
-A modern, interactive web-based Pokedex built with HTML, CSS, and vanilla JavaScript. Browse, search, and view details about your favorite Pokémon with enhanced performance and offline capabilities!
+![Pokéball](pokeball.svg)
 
-## Features
+A modern, interactive, and feature-rich Pokédex web application built with vanilla HTML, CSS, and JavaScript. It provides a fast and engaging experience for browsing and searching for your favorite Pokémon, complete with offline capabilities.
 
-*   **Browse Pokémon:** Navigate through Pokémon using ID numbers with the D-pad controls or your keyboard.
-*   **Search:** Find Pokémon quickly by name or National Pokédex number using the search bar.
-*   **Detailed View:** See Pokémon sprites (front and back), types, moves, abilities, and a short description.
-*   **Evolution Chain:** View the Pokémon's evolution line (if available).
-*   **Caching:** Uses sophisticated local caching to speed up loading times for previously viewed Pokémon.
-*   **Responsive Design:** Adapts to different screen sizes (basic responsiveness).
-*   **Offline Support:** Comprehensive offline capabilities using service workers to cache static assets, API responses, and images.
-*   **Fuzzy Search:** Enhanced search with multiple matching strategies including substring, startsWith, and fuzzy character matching.
-*   **Keyboard Shortcuts:** Full keyboard navigation with '?' for help overlay showing all available shortcuts.
-*   **Performance Optimized:** Improved loading with background preloading, request queuing, and progressive data loading.
-*   **Modular Architecture:** Clean, maintainable code structure with separation of concerns (UI, API, Controller, DOM).
+**(Optional: Add a screenshot of the application here)**
+
+---
+
+## Key Features
+
+*   **Comprehensive Pokémon Data:** View sprites (front & back), types, abilities, moves, and evolution chains.
+*   **Advanced Search:** Instantly find Pokémon by name or Pokédex number with a powerful fuzzy search engine that handles typos and special forms (e.g., "mega charizard").
+*   **Interactive UI:** A design inspired by the classic Pokédex, with clickable controls and full keyboard navigation.
+*   **Offline First:** Thanks to a Service Worker, the application is fully functional offline, caching all necessary assets and API data.
+*   **Performance Optimized:** Smart caching, background preloading of adjacent Pokémon, and a modular architecture ensure a fast and smooth experience.
+
+---
 
 ## Tech Stack
 
-*   **HTML5:** Structure of the application.
-*   **CSS3:** Styling and layout, including animations and CSS variables for theme management.
-*   **Vanilla JavaScript (ES6+):** Application logic, API interaction, DOM manipulation.
-*   **Service Workers:** Offline capabilities and intelligent caching strategies.
-*   **[PokéAPI](https://pokeapi.co/):** Source for all Pokémon data.
-*   **Modular JavaScript:** ES6 modules for better code organization and maintainability.
+*   **Frontend:** HTML5, CSS3, Vanilla JavaScript (ES6+)
+*   **API:** [PokéAPI V2](https://pokeapi.co/)
+*   **Offline Storage:** Service Worker API, LocalStorage
 
-## Setup & Usage
+---
 
-1.  **Clone the repository (optional):**
+## Getting Started
+
+### Prerequisites
+
+All you need is a modern web browser that supports ES6 modules and Service Workers (e.g., Chrome, Firefox, Safari, Edge).
+
+### Installation & Running Locally
+
+1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/kanishk-upadhyay/pokedex
+    git clone https://github.com/your-username/pokedex.git
     cd pokedex
     ```
-2.  **Open the application:**
-    Simply open the `index.html` file in your web browser.
 
-    *Note: Due to browser security restrictions regarding local file access (CORS), some features like background preloading might work best when served from a simple local web server.* You can use tools like Python's `http.server` or Node.js's `live-server`:
+2.  **Open the application:**
+    For the best experience (especially for features like offline caching), it's recommended to run this project using a simple local web server.
 
     *   **Using Python:**
         ```bash
         python -m http.server
-        # Then navigate to http://localhost:8000 in your browser
         ```
-    *   **Using Node.js (requires `live-server` installed globally):**
+        Then, open `http://localhost:8000` in your browser.
+
+    *   **Using Node.js (with `live-server`):**
         ```bash
         npm install -g live-server
         live-server
-        # It should automatically open the page in your browser
         ```
+        This will automatically open the page in your browser.
 
-## How it Works
+    You can also open the `index.html` file directly in your browser, but some features may be limited by browser security policies for local files.
 
-The application fetches Pokémon data from the [PokéAPI](https://pokeapi.co/). It maintains a sophisticated local cache to avoid redundant API calls and implements rate limiting to be respectful to the API. 
+---
 
-The application uses a modular architecture with four main JavaScript modules:
-- `controller.js`: Orchestrates the application flow and manages state
-- `ui.js`: Handles all user interface rendering and interactions
-- `api.js`: Manages API communication and caching with rate limiting
-- `dom.js`: Provides safe and efficient DOM creation utilities
+## How It Works
 
-Service workers provide offline capabilities by caching static assets, API responses, and Pokémon sprites. The application progressively loads the complete Pokémon database on first use and stores it in localStorage for subsequent quick access.
+The application is built with a modular architecture to separate concerns:
 
-User interactions trigger API requests or cache lookups, and the fetched data is dynamically displayed on the page by manipulating the DOM. Background preloading efficiently fetches adjacent Pokémon data for faster navigation.
+*   `controller.js`: The main brain of the application, orchestrating UI, data, and state management.
+*   `ui.js`: Handles all DOM manipulation, rendering, and user-facing interactions.
+*   `api.js`: Manages all communication with the PokéAPI, including request throttling and caching.
+*   `dom.js`: Contains utility functions for creating DOM elements programmatically.
+
+A **Service Worker** (`sw.js`) runs in the background, intercepting network requests to serve cached assets and data when the user is offline, ensuring a seamless experience. Pokémon data is cached using an LRU (Least Recently Used) strategy to manage memory, and the full list of Pokémon names is stored in `localStorage` for quick search access.
