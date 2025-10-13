@@ -188,7 +188,7 @@ body {
 
 /* Pokemon details styling */
 .pokemon-name {
-    font-size: 18px;
+    font-size: 20px;
     text-transform: capitalize;
     margin: auto auto 0.5em;
     color: ivory;
@@ -520,11 +520,6 @@ body {
     border-radius: var(--border-radius-standard);
     border: 1px solid #333;
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-}
-
-/* Add cross-browser scrollbar styling */
-/* Firefox */
-.pokemon-details-area {
     scrollbar-width: thin;
     scrollbar-color: #444 #222;
 }
@@ -684,10 +679,8 @@ body {
     z-index: 5;
 }
 
-/* Current evolution styling */
+/* Current evolution styling - already styled via JavaScript */
 .current-evolution {
-    color: ivory;
-    font-weight: bold;
     border-radius: 4px;
 }
 
@@ -780,7 +773,9 @@ body {
 
 /* Enhanced transitions for the modal */
 .shortcuts-modal {
-    transition: transform 0.3s ease, opacity 0.3s ease;
+    transition:
+        transform 0.3s ease,
+        opacity 0.3s ease;
 }
 
 .shortcuts-overlay {
@@ -945,7 +940,7 @@ body {
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         gap: 10px;
     }
-    
+
     .suggestion-button {
         text-align: center;
         white-space: nowrap;
