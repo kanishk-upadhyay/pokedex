@@ -4,25 +4,52 @@
 
 A modern, interactive, and feature-rich Pokédex web application built with vanilla HTML, CSS, and JavaScript. It provides a fast and engaging experience for browsing and searching for your favorite Pokémon, complete with offline capabilities.
 
-**(Optional: Add a screenshot of the application here)**
-
+Screenshot: [Pokédex](pokedex.png)
 ---
 
 ## Key Features
 
-*   **Comprehensive Pokémon Data:** View sprites (front & back), types, abilities, moves, and evolution chains.
-*   **Advanced Search:** Instantly find Pokémon by name or Pokédex number with a powerful fuzzy search engine that handles typos and special forms (e.g., "mega charizard").
-*   **Interactive UI:** A design inspired by the classic Pokédex, with clickable controls and full keyboard navigation.
-*   **Offline First:** Thanks to a Service Worker, the application is fully functional offline, caching all necessary assets and API data.
-*   **Performance Optimized:** Smart caching, background preloading of adjacent Pokémon, and a modular architecture ensure a fast and smooth experience.
+*   **Comprehensive Pokémon Data:** View sprites (front & back), types, abilities, moves, and evolution chains for over 1,000 Pokémon species.
+*   **Advanced Fuzzy Search:** Instantly find Pokémon by name or Pokédex number with powerful typo-tolerant search that handles special forms (e.g., "mega charizard" for "charizard-mega").
+*   **Interactive UI with Multiple Navigation Options:**
+    *   D-pad controls for sequential browsing
+    *   Full keyboard navigation with '?' for shortcuts
+    *   Number pad for direct ID entry
+    *   Clickable search suggestions with dynamic sizing
+*   **Enhanced Visual Design:**
+    *   Pokémon names styled with primary type color as text fill and secondary type color as text stroke for dual-type Pokémon
+    *   Responsive grid layout for search suggestions
+    *   Dynamic glass-like effects and animations
+*   **Offline First Architecture:** Fully functional offline experience using Service Worker technology to cache assets, API data, and images.
+*   **Performance Optimized:**
+    *   Smart LRU caching system for efficient memory management
+    *   Background preloading of adjacent Pokémon for faster navigation
+    *   Progressive data loading for quick initial load times
+    *   Request queuing to respect API rate limits
+*   **Evolution Chain Visualization:** View complete evolution lines with clear visual indicators.
+*   **Sprite Interaction:** Click Pokémon sprites to toggle between front and back views with appropriate error handling.
 
 ---
 
 ## Tech Stack
 
 *   **Frontend:** HTML5, CSS3, Vanilla JavaScript (ES6+)
+*   **Build System:** ES6 Modules for modular architecture
 *   **API:** [PokéAPI V2](https://pokeapi.co/)
 *   **Offline Storage:** Service Worker API, LocalStorage
+*   **Algorithms:** Levenshtein distance for fuzzy search, LRU cache implementation
+
+---
+
+## Architecture
+
+The application follows a modular architecture with clear separation of concerns:
+
+*   **`controller.js`:** Main application orchestrator, manages state and coordinates between modules
+*   **`ui.js`:** Handles all DOM manipulation, rendering, and user interactions
+*   **`api.js`:** Manages API communication, caching, and rate limiting
+*   **`dom.js`:** Safe and efficient DOM creation utilities
+*   **`sw.js`:** Service worker for offline capabilities and caching
 
 ---
 
@@ -30,7 +57,7 @@ A modern, interactive, and feature-rich Pokédex web application built with vani
 
 ### Prerequisites
 
-All you need is a modern web browser that supports ES6 modules and Service Workers (e.g., Chrome, Firefox, Safari, Edge).
+All you need is a modern web browser that supports ES6 modules and Service Workers (e.g., Chrome, Firefox, Safari, Zen).
 
 ### Installation & Running Locally
 
@@ -60,13 +87,12 @@ All you need is a modern web browser that supports ES6 modules and Service Worke
 
 ---
 
-## How It Works
+## Performance & Offline Capabilities
 
-The application is built with a modular architecture to separate concerns:
+The application is built with performance and offline functionality as core priorities:
 
-*   `controller.js`: The main brain of the application, orchestrating UI, data, and state management.
-*   `ui.js`: Handles all DOM manipulation, rendering, and user-facing interactions.
-*   `api.js`: Manages all communication with the PokéAPI, including request throttling and caching.
-*   `dom.js`: Contains utility functions for creating DOM elements programmatically.
-
-A **Service Worker** (`sw.js`) runs in the background, intercepting network requests to serve cached assets and data when the user is offline, ensuring a seamless experience. Pokémon data is cached using an LRU (Least Recently Used) strategy to manage memory, and the full list of Pokémon names is stored in `localStorage` for quick search access.
+*   **Service Worker:** Caches static assets and API responses for offline use
+*   **Smart Caching:** LRU cache with TTL expiration for efficient memory usage
+*   **Progressive Loading:** Loads Pokémon database in chunks to prevent UI blocking
+*   **Background Preloading:** Fetches adjacent Pokémon data for instant navigation
+*   **Request Queuing:** Prevents API rate limit issues during heavy usage
