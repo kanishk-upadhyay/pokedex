@@ -17,6 +17,9 @@ const PRELOAD_MAX = PRELOAD_MAX_ADJACENT;
  * - State management (pokemon cache, list, current view)
  * - UI updates through UIController
  * - Offline functionality via service worker
+ * - Advanced search with typo tolerance and special form matching (e.g. "mega charizard" for "charizard-mega")
+ * - Clickable search suggestions that load Pokémon details and update search bar
+ * - Enhanced sprite interaction with improved error handling
  * 
  * The controller follows a modular architecture where responsibilities are
  * separated into distinct modules (UI, API, DOM), with this class serving
@@ -156,7 +159,8 @@ class PokedexController {
     const isNowOpen = this.ui.togglePokedex();
 
     if (isNowOpen) {
-      this.ui.searchInput?.focus();
+      // Don't automatically focus the search bar - let user do it manually
+      // This allows the existing Pokémon name to remain until user explicitly focuses to type
 
       if (this.state.pokemonList.length > 0) {
         this.loadStarterPokemon();
@@ -452,7 +456,20 @@ class PokedexController {
 
     if (allMatches.length > 0) {
       // Use virtual scrolling to render only visible items
-      this.ui.renderPaginatedSuggestions(allMatches, 10); // Show 10 at a time
+      this.ui.renderPaginatedSuggestions(allMatches, 10, (selectedItem) => {
+        // When a suggestion is clicked, load that Pokémon
+        const selectedId = this.state.pokemonNameMap.get(selectedItem.name);
+        if (selectedId) {
+          this.fetchPokemonById(selectedId).catch((err) => {
+            if (err?.name !== "AbortError") {
+              this.ui.showError(`Error loading Pokemon: ${selectedItem.name}`);
+              console.error("Error loading selected Pokémon:", err);
+            }
+          });
+          // Update search bar with the selected Pokémon's name
+          this.ui.setSearchValue(selectedItem.name);
+        }
+      }); // Show 10 at a time with selection callback
       this.ui.clearMainScreen();
     } else {
       this.ui.showError("Pokémon not found. Check spelling.");
@@ -461,37 +478,60 @@ class PokedexController {
   }
   
   /**
-   * Performs fuzzy search with multiple matching strategies
+   * Performs advanced fuzzy search with multiple matching strategies including:
+   * - Exact substring matching
+   * - StartsWith matching  
+   * - Multi-token matching for special forms (e.g. "mega charizard" matches "charizard-mega")
+   * - Fuzzy character matching with Levenshtein distance for typo tolerance
    * @param {string} query - The search query
    * @returns {Array<string>} - Array of matching Pokémon names
    */
   _fuzzySearch(query) {
     const allNames = Array.from(this.state.pokemonNameMap.keys());
     
-    // First, try exact substring matches (for performance)
-    let exactMatches = allNames.filter(name => name.includes(query));
+    // Normalize query by replacing hyphens with spaces and trimming
+    const normalizedQuery = query.replace(/[-_]/g, ' ').trim();
+    const queryTokens = normalizedQuery.toLowerCase().split(/\s+/).filter(token => token.length > 0);
     
+    // 1. Exact substring matches (for performance)
+    let exactMatches = allNames.filter(name => name.includes(query));
     if (exactMatches.length > 0) {
-      return exactMatches.slice(0, 100); // Limit to 100 matches
+      return exactMatches.slice(0, 100);
     }
     
-    // If no exact matches, try more fuzzy approaches
-    // 1. StartsWith matches
+    // 2. StartsWith matches
     let startsWithMatches = allNames.filter(name => name.startsWith(query));
-    
     if (startsWithMatches.length > 0) {
       return startsWithMatches.slice(0, 100);
     }
     
-    // 2. Fuzzy character matching (allowing for typos, but simple approach)
-    // For example: "pikcu" could match "pikachu" 
-    let fuzzyMatches = [];
-    
-    // Simple fuzzy search by checking if all characters in query appear in order
+    // 3. Multi-token matching for special forms (e.g. "mega charizard" matches "charizard-mega")
+    let tokenMatches = [];
     for (const name of allNames) {
-      if (this._isFuzzyMatch(query, name)) {
+      const normalizedName = name.replace(/[-_]/g, ' ');
+      const nameTokens = normalizedName.toLowerCase().split(/\s+/);
+      
+      // Check if all query tokens are present in name tokens (in any order)
+      if (queryTokens.every(queryToken => 
+        nameTokens.some(nameToken => 
+          nameToken.startsWith(queryToken) || this._computeLevenshtein(queryToken, nameToken) <= 1
+        )
+      )) {
+        tokenMatches.push(name);
+        if (tokenMatches.length >= 100) break;
+      }
+    }
+    
+    if (tokenMatches.length > 0) {
+      return tokenMatches.slice(0, 100);
+    }
+    
+    // 4. Fuzzy character matching with Levenshtein distance for typos
+    let fuzzyMatches = [];
+    for (const name of allNames) {
+      if (this._isFuzzyMatch(query, name) || this._hasTypoMatch(query, name)) {
         fuzzyMatches.push(name);
-        if (fuzzyMatches.length >= 100) break; // Limit results
+        if (fuzzyMatches.length >= 100) break;
       }
     }
     
@@ -525,6 +565,81 @@ class PokedexController {
     }
     
     return queryIndex === query.length;
+  }
+  
+  /**
+   * Check for typo tolerance using Levenshtein distance
+   * @param {string} query - Query string
+   * @param {string} target - Target string to match against
+   * @returns {boolean} - Whether it's a typo-tolerant match
+   */
+  _hasTypoMatch(query, target) {
+    const q = query.toLowerCase();
+    const t = target.toLowerCase();
+    
+    // For short queries, be more restrictive
+    if (q.length <= 2) return false;
+    
+    // Try different substrings of the target to find a close match
+    for (let i = 0; i <= t.length - q.length; i++) {
+      const substr = t.substring(i, i + q.length);
+      if (this._computeLevenshtein(q, substr) <= 1) {
+        return true;
+      }
+    }
+    
+    // Also check if the full query is close to a prefix of the target
+    if (t.length >= q.length) {
+      const prefix = t.substring(0, q.length);
+      if (this._computeLevenshtein(q, prefix) <= 1) {
+        return true;
+      }
+    }
+    
+    // Check the reverse case too (target in query)
+    if (q.length >= t.length) {
+      const prefix = q.substring(0, t.length);
+      if (this._computeLevenshtein(t, prefix) <= 1) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Compute Levenshtein distance between two strings
+   * @param {string} s1 - First string
+   * @param {string} s2 - Second string
+   * @returns {number} - The edit distance
+   */
+  _computeLevenshtein(s1, s2) {
+    const m = s1.length;
+    const n = s2.length;
+    
+    if (m === 0) return n;
+    if (n === 0) return m;
+    
+    // Create a matrix to store distances
+    const d = Array(m + 1).fill().map(() => Array(n + 1).fill(0));
+    
+    // Initialize first row and column
+    for (let i = 0; i <= m; i++) d[i][0] = i;
+    for (let j = 0; j <= n; j++) d[0][j] = j;
+    
+    // Fill the matrix
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+        d[i][j] = Math.min(
+          d[i - 1][j] + 1,        // deletion
+          d[i][j - 1] + 1,        // insertion
+          d[i - 1][j - 1] + cost  // substitution
+        );
+      }
+    }
+    
+    return d[m][n];
   }
 
   preloadAdjacentPokemon(currentId) {
