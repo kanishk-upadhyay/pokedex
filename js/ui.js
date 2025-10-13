@@ -16,6 +16,10 @@
  * - Offline status indicators
  * - Keyboard shortcuts interface
  * - Dynamic content rendering (search suggestions, evolution chains)
+ * - Enhanced search suggestion functionality with clickable buttons and dynamic sizing
+ * - Improved sprite click handling with better error message management
+ * - Smart search bar clearing when user clicks on it with a Pokémon displayed
+ * - Number button handling that preserves multi-digit input for Pokémon IDs
  */
 
 import { el, img } from "./dom.js";
@@ -29,6 +33,7 @@ class UIController {
       spriteMessageTimeout: null,
       lastDisplayedId: null,
     };
+    this.programmaticallyFocused = false;
     this.initElements();
   }
 
@@ -117,6 +122,9 @@ class UIController {
         
         // Add the number to the search input
         this.elements.searchInput.value += String(n);
+        
+        // Set the flag to indicate this focus is programmatically triggered
+        this.programmaticallyFocused = true;
         this.elements.searchInput.focus();
       };
       
@@ -186,6 +194,18 @@ class UIController {
       this.elements.searchInput.addEventListener("keypress", (e) => {
         if (e.key === "Enter") onSearch();
       });
+      
+      // Clear search bar when user manually clicks on it with Pokémon displayed
+      this.elements.searchInput.addEventListener("focus", (e) => {
+        // When user manually focuses with Pokémon displayed, clear the content immediately
+        if (!this.programmaticallyFocused && this.state.lastDisplayedId) {
+          e.target.value = '';  // Clear the search bar immediately on focus
+        }
+        // Reset the programmatic flag after the event cycle
+        setTimeout(() => {
+          this.programmaticallyFocused = false;
+        }, 10);
+      });
     }
     
     // Set up shortcuts modal close button
@@ -219,7 +239,8 @@ class UIController {
       this.elements.pokedex.classList.remove("closed");
       this.elements.pokedex.classList.add("open");
       this.state.isOpen = true;
-      this.elements.searchInput?.focus();
+      // Don't automatically focus the search bar - let user do it manually
+      // This allows the existing Pokémon name to remain until user explicitly focuses to type
     } else {
       this.elements.pokedex.classList.remove("open");
       this.elements.pokedex.classList.add("closed");
@@ -484,6 +505,16 @@ class UIController {
    * @private
    */
   _handleSpriteClick(pokemon, img) {
+    // Clear any existing timeout and message elements to prevent conflicts
+    if (this.state.spriteMessageTimeout) {
+      clearTimeout(this.state.spriteMessageTimeout);
+      this.state.spriteMessageTimeout = null;
+    }
+    
+    // Remove any existing "image not available" messages
+    const existingMessages = this.elements.mainScreen.querySelectorAll('.loading');
+    existingMessages.forEach(msg => msg.remove());
+    
     if (this.state.showingFront) {
       if (pokemon.sprites.back_default) {
         img.src = pokemon.sprites.back_default;
@@ -493,11 +524,6 @@ class UIController {
         const messageEl = el("div", { class: "loading" }, "Back image not available");
         this.elements.mainScreen.appendChild(messageEl);
         
-        // Clear any existing timeout to prevent conflicts when navigating quickly
-        if (this.state.spriteMessageTimeout) {
-          clearTimeout(this.state.spriteMessageTimeout);
-        }
-
         this.state.spriteMessageTimeout = setTimeout(() => {
           // Only restore if the same Pokémon is still being displayed
           if (this.state.lastDisplayedId === pokemon.id) {
@@ -652,7 +678,15 @@ class UIController {
     return listEl;
   }
 
-  renderPaginatedSuggestions(allItems = [], pageSize = 10) {
+  /**
+   * Renders paginated search suggestions with dynamic sizing and click handling
+   * Creates a responsive grid layout for suggestions on larger screens
+   * @param {Array} allItems - Array of suggestion items to render
+   * @param {number} pageSize - Number of items to show initially
+   * @param {Function} onSelect - Callback function when a suggestion is clicked
+   * @returns {Element|null} - The container element or null if no items
+   */
+  renderPaginatedSuggestions(allItems = [], pageSize = 10, onSelect) {
     if (!this.elements.detailsArea || !Array.isArray(allItems) || allItems.length === 0) return null;
     
     // Clear existing content
@@ -680,10 +714,10 @@ class UIController {
     const rendered = initialItems
       .map(this._normalizeItem.bind(this))
       .filter(Boolean)
-      .map((item) => this._createSuggestionItem(item, (selectedItem) => {
-        // Handle selection in the original context
+      .map((item) => this._createSuggestionItem(item, onSelect || ((selectedItem) => {
+        // Default handler if no onSelect provided
         console.log("Selected item:", selectedItem);
-      }));
+      })));
 
     if (rendered.length) {
       const frag = document.createDocumentFragment();
@@ -700,7 +734,7 @@ class UIController {
         dataset: { page: "0" },
         onClick: (ev) => {
           ev.preventDefault();
-          this._handleLoadMore(allItems, pageSize, listEl, loadMoreBtn, state);
+          this._handleLoadMore(allItems, pageSize, listEl, loadMoreBtn, state, onSelect);
         }
       }, `Load more (${allItems.length - pageSize} remaining)`);
       
@@ -730,7 +764,7 @@ class UIController {
     if (this.elements.detailsArea) this.elements.detailsArea.innerHTML = message;
   }
   
-  _handleLoadMore(allItems, pageSize, listEl, loadMoreBtn, state) {
+  _handleLoadMore(allItems, pageSize, listEl, loadMoreBtn, state, onSelect) {
     // Disable button during loading to prevent duplicate clicks
     loadMoreBtn.disabled = true;
     loadMoreBtn.textContent = 'Loading...';
@@ -748,10 +782,10 @@ class UIController {
     const rendered = itemsToLoad
       .map(this._normalizeItem.bind(this))
       .filter(Boolean)
-      .map((item) => this._createSuggestionItem(item, (selectedItem) => {
-        // Handle selection in the original context
+      .map((item) => this._createSuggestionItem(item, onSelect || ((selectedItem) => {
+        // Default handler if no onSelect provided
         console.log("Selected item:", selectedItem);
-      }));
+      })));
     
     if (rendered.length) {
       const frag = document.createDocumentFragment();
