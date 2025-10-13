@@ -1,60 +1,101 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Pokédex</title>
+        <link rel="stylesheet" href="css/style.css" />
+    </head>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pokédex</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/animations.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Digital&display=swap">
-</head>
+    <body>
+        <h1 class="pokedex-title">Pokédex</h1>
 
-<body>
-    <h1 class="pokedex-title">Pokédex</h1>
-
-    <div id="pokedex" class="pokedex">
-
-        <div class="left-panel">
-            <div class="top">
-                <div class="camera-lens" id="camera-lens"></div>
-                <div class="indicator-lights">
-                    <div class="light red"></div>
-                    <div class="light yellow"></div>
-                    <div class="light green"></div>
+        <div id="pokedex" class="pokedex" role="application" aria-label="Pokédex Application">
+            <div class="left-panel">
+                <div class="top">
+                    <div class="camera-lens" id="camera-lens" role="button" tabindex="0" aria-label="Camera lens - Open Pokédex"></div>
+                    <div class="indicator-lights" aria-label="Status indicator lights">
+                        <div class="light red" aria-label="Red status light" role="status"></div>
+                        <div class="light yellow" aria-label="Yellow status light" role="status"></div>
+                        <div class="light green" aria-label="Green status light" role="status"></div>
+                    </div>
+                    <div class="spine" aria-hidden="true"></div>
                 </div>
-                <div class="spine"></div>
+                <div class="left-panel-content">
+                    <div class="main-screen" role="img" aria-label="Main Pokémon display screen">
+                        <div id="pokemon-display" class="pokemon-display" aria-live="polite"></div>
+                    </div>
+
+                    <div class="controls-area" aria-label="Directional controls">
+                        <div class="d-pad" role="toolbar" aria-label="Directional pad">
+                            <div class="d-pad-up" role="button" tabindex="0" aria-label="Navigate up"></div>
+                            <div class="d-pad-right" role="button" tabindex="0" aria-label="Navigate right"></div>
+                            <div class="d-pad-down" role="button" tabindex="0" aria-label="Navigate down"></div>
+                            <div class="d-pad-left" role="button" tabindex="0" aria-label="Navigate left"></div>
+                            <div class="d-pad-center" role="button" tabindex="0" aria-label="Center button - Search"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="left-panel-content">
-                <div class="main-screen">
-                    <div id="pokemon-display" class="pokemon-display"></div>
-                </div>
 
-                <div class="controls-area">
-                    <div class="d-pad">
-                        <div class="d-pad-up"></div>
-                        <div class="d-pad-right"></div>
-                        <div class="d-pad-down"></div>
-                        <div class="d-pad-left"></div>
-                        <div class="d-pad-center"></div>
+            <div class="right-panel">
+                <div class="right-panel-back">
+                    <div class="yellow-button" id="yellow-button" role="button" tabindex="0" aria-label="Yellow button - Toggle Pokédex"></div>
+                    <div class="bottom-edge" aria-hidden="true"></div>
+                </div>
+                <div class="right-panel-content">
+                    <div class="secondary-screen" role="region" aria-label="Search and details panel"></div>
+                    <div class="blue-button-grid" role="toolbar" aria-label="Number pad for searching by ID"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Use type="module" for ES modules support -->
+        <script type="module" src="js/index.js"></script>
+        
+        <!-- Keyboard shortcuts help overlay -->
+        <div class="shortcuts-overlay" id="shortcutsOverlay" role="dialog" aria-labelledby="shortcutsTitle" aria-hidden="true">
+            <div class="shortcuts-modal">
+                <div class="shortcuts-header">
+                    <h2 class="shortcuts-title" id="shortcutsTitle">Keyboard Shortcuts</h2>
+                    <button class="shortcuts-close" aria-label="Close shortcuts help" id="closeShortcuts">&times;</button>
+                </div>
+                <div class="shortcuts-content">
+                    <ul class="shortcuts-list">
+                        <li>
+                            <span class="shortcuts-key">↑</span>
+                            <span class="shortcuts-description">Navigate up</span>
+                        </li>
+                        <li>
+                            <span class="shortcuts-key">↓</span>
+                            <span class="shortcuts-description">Navigate down</span>
+                        </li>
+                        <li>
+                            <span class="shortcuts-key">←</span>
+                            <span class="shortcuts-description">Navigate left</span>
+                        </li>
+                        <li>
+                            <span class="shortcuts-key">→</span>
+                            <span class="shortcuts-description">Navigate right</span>
+                        </li>
+                        <li>
+                            <span class="shortcuts-key">Enter</span>
+                            <span class="shortcuts-description">Search</span>
+                        </li>
+                        <li>
+                            <span class="shortcuts-key">?</span>
+                            <span class="shortcuts-description">Show this help</span>
+                        </li>
+                        <li>
+                            <span class="shortcuts-key">Esc</span>
+                            <span class="shortcuts-description">Close help</span>
+                        </li>
+                    </ul>
+                    <div class="shortcuts-footer">
+                        Press <strong>?</strong> to open this help at any time
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="right-panel">
-            <div class="right-panel-back">
-                <div class="yellow-button" id="yellow-button"></div>
-                <div class="bottom-edge"></div>
-            </div>
-            <div class="right-panel-content">
-                <div class="secondary-screen"></div>
-                <div class="blue-button-grid"></div>
-            </div>
-        </div>
-    </div>
-
-    <script src="js/pokedex.js"></script>
-</body>
-
+    </body>
 </html>
