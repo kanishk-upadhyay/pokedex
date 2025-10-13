@@ -1,0 +1,41 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradients for a 3D effect -->
+    <radialGradient id="redGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#FF5E5E;" />
+      <stop offset="100%" style="stop-color:#CC0000;" />
+    </radialGradient>
+    <radialGradient id="whiteGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#FFFFFF;" />
+      <stop offset="100%" style="stop-color:#D3D3D3;" />
+    </radialGradient>
+    <radialGradient id="buttonGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#F0F0F0;" />
+      <stop offset="100%" style="stop-color:#CCCCCC;" />
+    </radialGradient>
+
+    <!-- This clip path will only show the area of the top half of the SVG -->
+    <clipPath id="topHalfClip">
+      <rect x="0" y="0" width="200" height="100" />
+    </clipPath>
+  </defs>
+
+  <!-- Black outline for the entire ball -->
+  <circle cx="100" cy="100" r="98" fill="#333" />
+
+  <!-- White bottom half (drawn as a full circle) -->
+  <circle cx="100" cy="100" r="95" fill="url(#whiteGradient)" />
+
+  <!-- Red top half (drawn as a full circle, but clipped to the top half) -->
+  <circle cx="100" cy="100" r="95" fill="url(#redGradient)" clip-path="url(#topHalfClip)" />
+
+  <!-- Specular highlight for a glossy effect -->
+  <path d="M140,30 A60,60 0 0,0 80,50 A70,70 0 0,1 140,30 Z" fill="rgba(255, 255, 255, 0.5)" />
+
+  <!-- Center button assembly -->
+  <circle cx="100" cy="100" r="32" fill="#333" />
+  <circle cx="100" cy="100" r="28" fill="url(#buttonGradient)" />
+  <circle cx="100" cy="100" r="18" fill="#333" />
+  <circle cx="100" cy="100" r="14" fill="#F0F0F0" />
+  <circle cx="100" cy="100" r="10" fill="#CCCCCC" />
+</svg>
