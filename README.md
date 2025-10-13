@@ -61,7 +61,7 @@ All you need is a modern web browser that supports ES6 modules and Service Worke
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/your-username/pokedex.git
+    git clone https://github.com/kanishk-upadhyay/pokedex.git
     cd pokedex
     ```
 
