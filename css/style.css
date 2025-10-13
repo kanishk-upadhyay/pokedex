@@ -188,7 +188,7 @@ body {
 
 /* Pokemon details styling */
 .pokemon-name {
-    font-size: 1.15em;
+    font-size: 18px;
     text-transform: capitalize;
     margin: auto auto 0.5em;
     color: ivory;
@@ -199,7 +199,7 @@ body {
 }
 
 .pokemon-entry {
-    font-size: 0.85em;
+    font-size: 14px;
     margin: 0.5em auto;
 }
 
@@ -207,7 +207,7 @@ body {
 .pokemon-abilities,
 .pokemon-moves,
 .pokemon-evolutions {
-    font-size: 0.8em;
+    font-size: 13px;
     margin: auto;
     text-transform: capitalize;
 }
@@ -280,7 +280,7 @@ body {
     margin: 2px;
     border-radius: 12px;
     text-transform: capitalize;
-    font-size: 0.8em;
+    font-size: 13px;
     color: white;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
     background-color: var(--type-color, #ccc); /* Default fallback */
@@ -501,7 +501,7 @@ body {
 
 .pokemon-search-input,
 .pokemon-search-button {
-    font-size: 0.7em;
+    font-size: 12px;
 }
 
 .pokemon-search-button:active {
@@ -514,7 +514,7 @@ body {
     overflow-y: auto;
     padding: 5px;
     color: var(--color-text-secondary);
-    font-size: 0.85em;
+    font-size: 14px;
     max-height: 230px;
     background-color: #181818;
     border-radius: var(--border-radius-standard);
