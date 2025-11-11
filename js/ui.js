@@ -31,6 +31,7 @@ class UIController {
       isOpen: false,
       showingFront: true,
       spriteMessageTimeout: null,
+      spriteMessageElement: null,
       lastDisplayedId: null,
     };
     this.programmaticallyFocused = false;
@@ -91,6 +92,8 @@ class UIController {
     );
     this.elements.detailsArea = document.querySelector(".pokemon-details-area");
     this.elements.blueButtonGrid = document.querySelector(".blue-button-grid");
+    this.elements.shortcutsOverlay = document.getElementById("shortcutsOverlay");
+    this.elements.closeShortcuts = document.getElementById("closeShortcuts");
   }
 
   /**
@@ -361,6 +364,8 @@ class UIController {
    */
   async displayPokemon(pokemon) {
     clearTimeout(this.state.spriteMessageTimeout);
+    this.state.spriteMessageTimeout = null;
+    this.state.spriteMessageElement = null;
 
     if (!this.elements.mainScreen || !this.elements.detailsArea) {
       console.error("Main screen or details area not initialized.");
@@ -519,15 +524,17 @@ class UIController {
    * @private
    */
   _handleSpriteClick(pokemon, img) {
-    // Clear any existing timeout and message elements to prevent conflicts
+    // Clear any existing timeout and message element to prevent conflicts
     if (this.state.spriteMessageTimeout) {
       clearTimeout(this.state.spriteMessageTimeout);
       this.state.spriteMessageTimeout = null;
     }
     
-    // Remove any existing "image not available" messages
-    const existingMessages = this.elements.mainScreen.querySelectorAll('.loading');
-    existingMessages.forEach(msg => msg.remove());
+    // Remove the message element if it exists (store reference for efficiency)
+    if (this.state.spriteMessageElement) {
+      this.state.spriteMessageElement.remove();
+      this.state.spriteMessageElement = null;
+    }
     
     if (this.state.showingFront) {
       if (pokemon.sprites.back_default) {
@@ -537,11 +544,13 @@ class UIController {
         // Show message that back image is not available
         const messageEl = el("div", { class: "loading" }, "Back image not available");
         this.elements.mainScreen.appendChild(messageEl);
+        this.state.spriteMessageElement = messageEl;
         
         this.state.spriteMessageTimeout = setTimeout(() => {
           // Only restore if the same Pokémon is still being displayed
-          if (this.state.lastDisplayedId === pokemon.id) {
-            messageEl.remove();
+          if (this.state.lastDisplayedId === pokemon.id && this.state.spriteMessageElement) {
+            this.state.spriteMessageElement.remove();
+            this.state.spriteMessageElement = null;
           }
         }, 1500);
       }

@@ -42,6 +42,7 @@ class PokedexController {
       pokemonCache: new Cache(),
       pokemonList: [],
       pokemonNameMap: new Map(),
+      pokemonNameArray: [], // Cached array of pokemon names for search performance
       totalPokemon: 0,
       isNavigating: false,
       searchTimeout: null,
@@ -267,6 +268,7 @@ class PokedexController {
       this.state.pokemonNameMap = new Map(
         persisted.map((p) => [p.name.toLowerCase(), p.id]),
       );
+      this.state.pokemonNameArray = Array.from(this.state.pokemonNameMap.keys());
       this.state.totalPokemon = apiCount;
       return;
     }
@@ -316,6 +318,7 @@ class PokedexController {
       // Only update state if all data was loaded successfully
       this.state.pokemonList = tempList;
       this.state.pokemonNameMap = tempNameMap;
+      this.state.pokemonNameArray = Array.from(tempNameMap.keys());
       this.state.totalPokemon = tempList.length;
       StorageHelper.saveToStorage(key, tempList);
       console.log("Pokédex database loaded successfully!");
@@ -483,62 +486,67 @@ class PokedexController {
    * - StartsWith matching  
    * - Multi-token matching for special forms (e.g. "mega charizard" matches "charizard-mega")
    * - Fuzzy character matching with Levenshtein distance for typo tolerance
+   * Optimized to use cached name array and single-pass filtering
    * @param {string} query - The search query
    * @returns {Array<string>} - Array of matching Pokémon names
    */
   _fuzzySearch(query) {
-    const allNames = Array.from(this.state.pokemonNameMap.keys());
+    const allNames = this.state.pokemonNameArray;
+    if (!allNames || allNames.length === 0) {
+      return [];
+    }
     
     // Normalize query by replacing hyphens with spaces and trimming
     const normalizedQuery = query.replace(/[-_]/g, ' ').trim();
     const queryTokens = normalizedQuery.toLowerCase().split(/\s+/).filter(token => token.length > 0);
     
-    // 1. Exact substring matches (for performance)
-    let exactMatches = allNames.filter(name => name.includes(query));
-    if (exactMatches.length > 0) {
-      return exactMatches.slice(0, 100);
-    }
+    // Use a single pass through all names, scoring each match type
+    const matches = [];
     
-    // 2. StartsWith matches
-    let startsWithMatches = allNames.filter(name => name.startsWith(query));
-    if (startsWithMatches.length > 0) {
-      return startsWithMatches.slice(0, 100);
-    }
-    
-    // 3. Multi-token matching for special forms (e.g. "mega charizard" matches "charizard-mega")
-    let tokenMatches = [];
     for (const name of allNames) {
-      const normalizedName = name.replace(/[-_]/g, ' ');
-      const nameTokens = normalizedName.toLowerCase().split(/\s+/);
+      let matchType = null;
       
-      // Check if all query tokens are present in name tokens (in any order)
-      if (queryTokens.every(queryToken => 
-        nameTokens.some(nameToken => 
-          nameToken.startsWith(queryToken) || this._computeLevenshtein(queryToken, nameToken) <= 1
-        )
-      )) {
-        tokenMatches.push(name);
-        if (tokenMatches.length >= 100) break;
+      // 1. Exact substring match (highest priority)
+      if (name.includes(query)) {
+        matchType = { priority: 1, name };
+      }
+      // 2. StartsWith match
+      else if (name.startsWith(query)) {
+        matchType = { priority: 2, name };
+      }
+      // 3. Multi-token matching for special forms
+      else {
+        const normalizedName = name.replace(/[-_]/g, ' ');
+        const nameTokens = normalizedName.toLowerCase().split(/\s+/);
+        
+        // Check if all query tokens are present in name tokens (in any order)
+        if (queryTokens.every(queryToken => 
+          nameTokens.some(nameToken => 
+            nameToken.startsWith(queryToken) || this._computeLevenshtein(queryToken, nameToken, 1) <= 1
+          )
+        )) {
+          matchType = { priority: 3, name };
+        }
+        // 4. Fuzzy character matching with Levenshtein distance
+        else if (this._isFuzzyMatch(query, name) || this._hasTypoMatch(query, name)) {
+          matchType = { priority: 4, name };
+        }
+      }
+      
+      if (matchType) {
+        matches.push(matchType);
+        // Early exit if we have enough high-quality matches
+        if (matches.length >= 100 && matchType.priority <= 2) break;
       }
     }
     
-    if (tokenMatches.length > 0) {
-      return tokenMatches.slice(0, 100);
-    }
+    // Sort by priority first, then by name length (shorter names first for relevance)
+    matches.sort((a, b) => {
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      return a.name.length - b.name.length;
+    });
     
-    // 4. Fuzzy character matching with Levenshtein distance for typos
-    let fuzzyMatches = [];
-    for (const name of allNames) {
-      if (this._isFuzzyMatch(query, name) || this._hasTypoMatch(query, name)) {
-        fuzzyMatches.push(name);
-        if (fuzzyMatches.length >= 100) break;
-      }
-    }
-    
-    // Sort results by length (shorter matches first) to show more relevant results
-    fuzzyMatches.sort((a, b) => a.length - b.length);
-    
-    return fuzzyMatches.slice(0, 100);
+    return matches.slice(0, 100).map(m => m.name);
   }
   
   /**
@@ -568,7 +576,7 @@ class PokedexController {
   }
   
   /**
-   * Check for typo tolerance using Levenshtein distance
+   * Check for typo tolerance using Levenshtein distance with early termination
    * @param {string} query - Query string
    * @param {string} target - Target string to match against
    * @returns {boolean} - Whether it's a typo-tolerant match
@@ -580,10 +588,22 @@ class PokedexController {
     // For short queries, be more restrictive
     if (q.length <= 2) return false;
     
+    const threshold = 1;
+    
     // Try different substrings of the target to find a close match
-    for (let i = 0; i <= t.length - q.length; i++) {
+    // Optimize by checking fewer positions
+    const step = Math.max(1, Math.floor(q.length / 3)); // Skip some positions for performance
+    for (let i = 0; i <= t.length - q.length; i += step) {
       const substr = t.substring(i, i + q.length);
-      if (this._computeLevenshtein(q, substr) <= 1) {
+      if (this._computeLevenshtein(q, substr, threshold) <= threshold) {
+        return true;
+      }
+    }
+    // Check the last position if we skipped it
+    if ((t.length - q.length) % step !== 0 && t.length >= q.length) {
+      const i = t.length - q.length;
+      const substr = t.substring(i, i + q.length);
+      if (this._computeLevenshtein(q, substr, threshold) <= threshold) {
         return true;
       }
     }
@@ -591,7 +611,7 @@ class PokedexController {
     // Also check if the full query is close to a prefix of the target
     if (t.length >= q.length) {
       const prefix = t.substring(0, q.length);
-      if (this._computeLevenshtein(q, prefix) <= 1) {
+      if (this._computeLevenshtein(q, prefix, threshold) <= threshold) {
         return true;
       }
     }
@@ -599,7 +619,7 @@ class PokedexController {
     // Check the reverse case too (target in query)
     if (q.length >= t.length) {
       const prefix = q.substring(0, t.length);
-      if (this._computeLevenshtein(t, prefix) <= 1) {
+      if (this._computeLevenshtein(t, prefix, threshold) <= threshold) {
         return true;
       }
     }
@@ -608,38 +628,59 @@ class PokedexController {
   }
   
   /**
-   * Compute Levenshtein distance between two strings
+   * Compute Levenshtein distance between two strings with early termination
+   * Uses space-optimized algorithm with only two rows and threshold-based early exit
    * @param {string} s1 - First string
    * @param {string} s2 - Second string
-   * @returns {number} - The edit distance
+   * @param {number} threshold - Maximum distance to compute (defaults to Infinity)
+   * @returns {number} - The edit distance (returns threshold + 1 if exceeded)
    */
-  _computeLevenshtein(s1, s2) {
+  _computeLevenshtein(s1, s2, threshold = Infinity) {
     const m = s1.length;
     const n = s2.length;
     
     if (m === 0) return n;
     if (n === 0) return m;
     
-    // Create a matrix to store distances
-    const d = Array(m + 1).fill().map(() => Array(n + 1).fill(0));
-    
-    // Initialize first row and column
-    for (let i = 0; i <= m; i++) d[i][0] = i;
-    for (let j = 0; j <= n; j++) d[0][j] = j;
-    
-    // Fill the matrix
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
-        const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
-        d[i][j] = Math.min(
-          d[i - 1][j] + 1,        // deletion
-          d[i][j - 1] + 1,        // insertion
-          d[i - 1][j - 1] + cost  // substitution
-        );
-      }
+    // Swap strings if needed so s1 is always shorter or equal
+    if (m > n) {
+      return this._computeLevenshtein(s2, s1, threshold);
     }
     
-    return d[m][n];
+    // Use only two rows instead of full matrix (space optimization)
+    let prevRow = new Array(n + 1);
+    let currRow = new Array(n + 1);
+    
+    // Initialize first row
+    for (let j = 0; j <= n; j++) {
+      prevRow[j] = j;
+    }
+    
+    // Fill the rows
+    for (let i = 1; i <= m; i++) {
+      currRow[0] = i;
+      let minInRow = i; // Track minimum value in current row for early termination
+      
+      for (let j = 1; j <= n; j++) {
+        const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+        currRow[j] = Math.min(
+          prevRow[j] + 1,        // deletion
+          currRow[j - 1] + 1,    // insertion
+          prevRow[j - 1] + cost  // substitution
+        );
+        minInRow = Math.min(minInRow, currRow[j]);
+      }
+      
+      // Early termination: if minimum value in current row exceeds threshold, stop
+      if (minInRow > threshold) {
+        return threshold + 1;
+      }
+      
+      // Swap rows for next iteration
+      [prevRow, currRow] = [currRow, prevRow];
+    }
+    
+    return prevRow[n];
   }
 
   preloadAdjacentPokemon(currentId) {

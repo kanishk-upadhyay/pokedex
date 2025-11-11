@@ -30,15 +30,26 @@ export class Cache {
   }
 
   set(key, value) {
-    // Clean expired entries if needed
+    // Remove oldest entry if at max size (lazy expiration)
+    // This is more efficient than scanning all entries
     if (this.cache.size >= this.maxSize) {
-      this._cleanupExpired();
-    }
-    
-    // Remove oldest entry if at max size
-    if (this.cache.size >= this.maxSize) {
-      const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
+      // Try to find and remove the first expired entry
+      let removedExpired = false;
+      const now = Date.now();
+      
+      for (const [k, entry] of this.cache) {
+        if (now - entry.timestamp > this.expiry) {
+          this.cache.delete(k);
+          removedExpired = true;
+          break;
+        }
+      }
+      
+      // If no expired entry found, remove the oldest entry (first in Map)
+      if (!removedExpired && this.cache.size >= this.maxSize) {
+        const firstKey = this.cache.keys().next().value;
+        this.cache.delete(firstKey);
+      }
     }
     
     this.cache.set(key, { value, timestamp: Date.now() });
@@ -66,15 +77,6 @@ export class Cache {
     }
     
     return true;
-  }
-  
-  _cleanupExpired() {
-    const now = Date.now();
-    for (const [key, entry] of this.cache) {
-      if (now - entry.timestamp > this.expiry) {
-        this.cache.delete(key);
-      }
-    }
   }
   
   clear() {
