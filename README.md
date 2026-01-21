@@ -2,7 +2,11 @@
 
 A modern, interactive, and feature-rich Pokédex web application built with vanilla HTML, CSS, and JavaScript. It provides a fast and engaging experience for browsing and searching for your favorite Pokémon, complete with offline capabilities.
 
-Screenshot: ![Pokédex](pokedex.png)
+## Screenshots
+<p align="center" width="100%">
+<img width="25%" alt="Pokédex" src="https://github.com/user-attachments/assets/f7c44fd3-fdc9-44fc-8816-5986c78185d4" /> <img width="50%" alt="Pokédex" src="https://github.com/user-attachments/assets/495f3e42-4a21-4b99-97e4-2c632146b214" />
+</p>
+
 ---
 
 ## Key Features
