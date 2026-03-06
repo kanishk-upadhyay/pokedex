@@ -213,7 +213,7 @@ export class PokemonAPI {
  */
 export class PerformanceLogger {
   static measureFunction(fn, name) {
-    return async (...args) => {
+    return async function(...args) {
       const start = performance.now();
       try {
         const result = await fn.apply(this, args);

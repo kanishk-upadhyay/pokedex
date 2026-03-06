@@ -91,6 +91,8 @@ class UIController {
     );
     this.elements.detailsArea = document.querySelector(".pokemon-details-area");
     this.elements.blueButtonGrid = document.querySelector(".blue-button-grid");
+    this.elements.shortcutsOverlay = document.querySelector(".shortcuts-overlay");
+    this.elements.closeShortcuts = document.querySelector(".shortcuts-close");
   }
 
   /**
@@ -106,10 +108,9 @@ class UIController {
     [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].forEach((n) => {
       const btn = document.createElement("button");
       btn.className = "blue-button";
+      btn.textContent = String(n);
       btn.dataset.value = String(n);
-      
 
-      
       const handleButtonInput = (e) => {
         e.preventDefault();
         
@@ -561,14 +562,6 @@ class UIController {
     );
   }
 
-  _getTypeChips(pokemon) {
-    return (pokemon.types || [])
-      .map(
-        (t) => `<span class="type-chip ${t.type.name}">${t.type.name}</span>`,
-      )
-      .join(" ");
-  }
-
   _getMovesString(pokemon) {
     return (pokemon.moves || [])
       .slice(0, 4)
@@ -624,7 +617,24 @@ class UIController {
       const out = [node];
 
       if (chain.evolves_to && chain.evolves_to.length > 0) {
-        out.push(...build(chain.evolves_to[0], currentName));
+        if (chain.evolves_to.length === 1) {
+          // Linear evolution: append directly
+          out.push(...build(chain.evolves_to[0], currentName));
+        } else {
+          // Branched evolution (e.g. Eevee): show all branches separated by "/"
+          const branches = chain.evolves_to.map((branch) => {
+            const branchNodes = build(branch, currentName);
+            return el("span", { class: "evolution-branch" }, ...branchNodes);
+          });
+          const branchWrapper = el("span", { class: "evolution-branches", "aria-label": "Evolution branches" });
+          branches.forEach((b, i) => {
+            branchWrapper.appendChild(b);
+            if (i < branches.length - 1) {
+              branchWrapper.appendChild(el("span", { "aria-hidden": "true" }, "/"));
+            }
+          });
+          out.push(branchWrapper);
+        }
       }
 
       return out;
