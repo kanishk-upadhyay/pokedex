@@ -719,6 +719,11 @@ class UIController {
   renderPaginatedSuggestions(allItems = [], pageSize = 10, onSelect) {
     if (!this.elements.detailsArea || !Array.isArray(allItems) || allItems.length === 0) return null;
     
+    const activeOnSelect = onSelect || ((selectedItem) => {
+      // Default handler if no onSelect provided
+      console.log("Selected item:", selectedItem);
+    });
+
     // Clear existing content
     this.elements.detailsArea.innerHTML = "";
     
@@ -744,10 +749,7 @@ class UIController {
     const rendered = initialItems
       .map(this._normalizeItem.bind(this))
       .filter(Boolean)
-      .map((item) => this._createSuggestionItem(item, onSelect || ((selectedItem) => {
-        // Default handler if no onSelect provided
-        console.log("Selected item:", selectedItem);
-      })));
+      .map((item) => this._createSuggestionItem(item, activeOnSelect));
 
     if (rendered.length) {
       const frag = document.createDocumentFragment();
@@ -764,7 +766,7 @@ class UIController {
         dataset: { page: "0" },
         onClick: (ev) => {
           ev.preventDefault();
-          this._handleLoadMore(allItems, pageSize, listEl, loadMoreBtn, state, onSelect);
+          this._handleLoadMore(allItems, pageSize, listEl, loadMoreBtn, state, activeOnSelect);
         }
       }, `Load more (${allItems.length - pageSize} remaining)`);
       
@@ -812,10 +814,7 @@ class UIController {
     const rendered = itemsToLoad
       .map(this._normalizeItem.bind(this))
       .filter(Boolean)
-      .map((item) => this._createSuggestionItem(item, onSelect || ((selectedItem) => {
-        // Default handler if no onSelect provided
-        console.log("Selected item:", selectedItem);
-      })));
+      .map((item) => this._createSuggestionItem(item, onSelect));
     
     if (rendered.length) {
       const frag = document.createDocumentFragment();
