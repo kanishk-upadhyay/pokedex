@@ -42,6 +42,7 @@ class PokedexController {
       pokemonCache: new Cache(),
       pokemonList: [],
       pokemonNameMap: new Map(),
+      pokemonNames: [],
       totalPokemon: 0,
       isNavigating: false,
       searchTimeout: null,
@@ -267,6 +268,7 @@ class PokedexController {
       this.state.pokemonNameMap = new Map(
         persisted.map((p) => [p.name.toLowerCase(), p.id]),
       );
+      this.state.pokemonNames = Array.from(this.state.pokemonNameMap.keys());
       this.state.totalPokemon = apiCount;
       return;
     }
@@ -316,6 +318,7 @@ class PokedexController {
       // Only update state if all data was loaded successfully
       this.state.pokemonList = tempList;
       this.state.pokemonNameMap = tempNameMap;
+      this.state.pokemonNames = Array.from(tempNameMap.keys());
       this.state.totalPokemon = tempList.length;
       StorageHelper.saveToStorage(key, tempList);
       console.log("Pokédex database loaded successfully!");
@@ -380,6 +383,9 @@ class PokedexController {
 
       this.state.pokemonCache.set(data.id, data);
       this.state.pokemonCache.set(`name_${data.name.toLowerCase()}`, data);
+      if (!this.state.pokemonNameMap.has(data.name.toLowerCase())) {
+        this.state.pokemonNames.push(data.name.toLowerCase());
+      }
       this.state.pokemonNameMap.set(data.name.toLowerCase(), data.id);
       return data;
     } catch (err) {
@@ -487,7 +493,7 @@ class PokedexController {
    * @returns {Array<string>} - Array of matching Pokémon names
    */
   _fuzzySearch(query) {
-    const allNames = Array.from(this.state.pokemonNameMap.keys());
+    const allNames = this.state.pokemonNames;
     
     // Normalize query by replacing hyphens with spaces and trimming
     const normalizedQuery = query.replace(/[-_]/g, ' ').trim();
