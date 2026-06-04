@@ -381,12 +381,13 @@ class PokedexController {
         }
       }
 
+      const nameLower = data.name.toLowerCase();
       this.state.pokemonCache.set(data.id, data);
-      this.state.pokemonCache.set(`name_${data.name.toLowerCase()}`, data);
-      if (!this.state.pokemonNameMap.has(data.name.toLowerCase())) {
-        this.state.pokemonNames.push(data.name.toLowerCase());
+      this.state.pokemonCache.set(`name_${nameLower}`, data);
+      if (!this.state.pokemonNameMap.has(nameLower)) {
+        this.state.pokemonNames.push(nameLower);
       }
-      this.state.pokemonNameMap.set(data.name.toLowerCase(), data.id);
+      this.state.pokemonNameMap.set(nameLower, data.id);
       return data;
     } catch (err) {
       if (err?.name === "AbortError") throw err;
