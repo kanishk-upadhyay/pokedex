@@ -43,6 +43,7 @@ class PokedexController {
       pokemonList: [],
       pokemonNameMap: new Map(),
       pokemonNameTokensMap: new Map(),
+      pokemonNames: [],
       totalPokemon: 0,
       isNavigating: false,
       searchTimeout: null,
@@ -274,6 +275,7 @@ class PokedexController {
           return [nameLower, nameLower.replace(/[-_]/g, ' ').split(/\s+/)];
         })
       );
+      this.state.pokemonNames = Array.from(this.state.pokemonNameMap.keys());
       this.state.totalPokemon = apiCount;
       return;
     }
@@ -327,6 +329,7 @@ class PokedexController {
       this.state.pokemonList = tempList;
       this.state.pokemonNameMap = tempNameMap;
       this.state.pokemonNameTokensMap = tempTokensMap;
+      this.state.pokemonNames = Array.from(tempNameMap.keys());
       this.state.totalPokemon = tempList.length;
       StorageHelper.saveToStorage(key, tempList);
       console.log("Pokédex database loaded successfully!");
@@ -389,10 +392,14 @@ class PokedexController {
         }
       }
 
+      const nameLower = data.name.toLowerCase();
       this.state.pokemonCache.set(data.id, data);
-      this.state.pokemonCache.set(`name_${data.name.toLowerCase()}`, data);
-      this.state.pokemonNameMap.set(data.name.toLowerCase(), data.id);
-      this.state.pokemonNameTokensMap.set(data.name.toLowerCase(), data.name.toLowerCase().replace(/[-_]/g, ' ').split(/\s+/));
+      this.state.pokemonCache.set(`name_${nameLower}`, data);
+      if (!this.state.pokemonNameMap.has(nameLower)) {
+        this.state.pokemonNames.push(nameLower);
+      }
+      this.state.pokemonNameMap.set(nameLower, data.id);
+      this.state.pokemonNameTokensMap.set(nameLower, nameLower.replace(/[-_]/g, ' ').split(/\s+/));
       return data;
     } catch (err) {
       if (err?.name === "AbortError") throw err;
@@ -499,7 +506,7 @@ class PokedexController {
    * @returns {Array<string>} - Array of matching Pokémon names
    */
   _fuzzySearch(query) {
-    const allNames = Array.from(this.state.pokemonNameMap.keys());
+    const allNames = this.state.pokemonNames;
     
     // Normalize query by replacing hyphens with spaces and trimming
     const normalizedQuery = query.replace(/[-_]/g, ' ').trim();

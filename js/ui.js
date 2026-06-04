@@ -430,7 +430,7 @@ class UIController {
     );
 
     // Apply primary color for text fill and secondary color for text stroke if present
-    try {
+    if (nameEl && nameEl.style) {
       // Use primary type color for text fill
       const fillCssVarName = `--color-${primaryType}`;
       nameEl.style.webkitTextFillColor = `var(${fillCssVarName}, ivory)`;
@@ -441,8 +441,8 @@ class UIController {
       nameEl.style.textShadow = 'none';
       
       // If secondary type is present, apply it as text stroke
-      if (pokemon.types && pokemon.types.length > 1) {
-        const secondaryType = pokemon.types[1].type.name;
+      const secondaryType = pokemon?.types?.[1]?.type?.name;
+      if (secondaryType) {
         const strokeCssVarName = `--color-${secondaryType}`;
         // Apply text stroke using -webkit-text-stroke for browser compatibility
         nameEl.style.webkitTextStroke = `1px var(${strokeCssVarName}, #ccc)`;
@@ -452,10 +452,6 @@ class UIController {
         // For single-type Pokémon, no text stroke for cleaner look
         nameEl.style.webkitTextStroke = 'none';
       }
-    } catch (err) {
-      // On unexpected errors, don't modify nameEl styles so CSS remains authoritative.
-      // eslint-disable-next-line no-console
-      console.error("Failed to apply color styling:", err);
     }
 
     const typeChips = (pokemon.types || []).map((t) =>
