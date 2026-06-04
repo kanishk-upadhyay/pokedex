@@ -108,7 +108,7 @@ function _applyAttributes(el, attrs = {}) {
           el[key] = value;
         }
       } catch (e) {
-        console.warn(`Failed to set property '${key}' on element`, e);
+        console.warn(`Failed to set property '${key}' on element:`, el, `with value:`, value, e);
       }
       return;
     }
