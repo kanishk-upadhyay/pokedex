@@ -42,6 +42,7 @@ class PokedexController {
       pokemonCache: new Cache(),
       pokemonList: [],
       pokemonNameMap: new Map(),
+      pokemonNameTokensMap: new Map(),
       totalPokemon: 0,
       isNavigating: false,
       searchTimeout: null,
@@ -267,6 +268,12 @@ class PokedexController {
       this.state.pokemonNameMap = new Map(
         persisted.map((p) => [p.name.toLowerCase(), p.id]),
       );
+      this.state.pokemonNameTokensMap = new Map(
+        persisted.map((p) => {
+          const nameLower = p.name.toLowerCase();
+          return [nameLower, nameLower.replace(/[-_]/g, ' ').split(/\s+/)];
+        })
+      );
       this.state.totalPokemon = apiCount;
       return;
     }
@@ -285,6 +292,7 @@ class PokedexController {
       // Use temporary variables to avoid partial state updates
       const tempList = [];
       const tempNameMap = new Map();
+      const tempTokensMap = new Map();
       let url = `pokemon?limit=${PAGE_SIZE}&offset=0`;
       let hasMore = true;
 
@@ -296,8 +304,10 @@ class PokedexController {
           const id = parseInt(result.url.split("/").slice(-2, -1)[0], 10);
           if (!isNaN(id)) {
             const pokemon = { name: result.name, id };
+            const nameLower = result.name.toLowerCase();
             tempList.push(pokemon);
-            tempNameMap.set(result.name.toLowerCase(), id);
+            tempNameMap.set(nameLower, id);
+            tempTokensMap.set(nameLower, nameLower.replace(/[-_]/g, ' ').split(/\s+/));
           }
         }
         
@@ -316,6 +326,7 @@ class PokedexController {
       // Only update state if all data was loaded successfully
       this.state.pokemonList = tempList;
       this.state.pokemonNameMap = tempNameMap;
+      this.state.pokemonNameTokensMap = tempTokensMap;
       this.state.totalPokemon = tempList.length;
       StorageHelper.saveToStorage(key, tempList);
       console.log("Pokédex database loaded successfully!");
@@ -381,6 +392,7 @@ class PokedexController {
       this.state.pokemonCache.set(data.id, data);
       this.state.pokemonCache.set(`name_${data.name.toLowerCase()}`, data);
       this.state.pokemonNameMap.set(data.name.toLowerCase(), data.id);
+      this.state.pokemonNameTokensMap.set(data.name.toLowerCase(), data.name.toLowerCase().replace(/[-_]/g, ' ').split(/\s+/));
       return data;
     } catch (err) {
       if (err?.name === "AbortError") throw err;
@@ -508,8 +520,7 @@ class PokedexController {
     // 3. Multi-token matching for special forms (e.g. "mega charizard" matches "charizard-mega")
     let tokenMatches = [];
     for (const name of allNames) {
-      const normalizedName = name.replace(/[-_]/g, ' ');
-      const nameTokens = normalizedName.toLowerCase().split(/\s+/);
+      const nameTokens = this.state.pokemonNameTokensMap.get(name) || name.replace(/[-_]/g, ' ').split(/\s+/);
       
       // Check if all query tokens are present in name tokens (in any order)
       if (queryTokens.every(queryToken => 
