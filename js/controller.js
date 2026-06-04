@@ -297,9 +297,10 @@ class PokedexController {
         for (const result of data.results) {
           const id = parseInt(result.url.split("/").slice(-2, -1)[0], 10);
           if (!isNaN(id)) {
-            const pokemon = { name: result.name, id };
+            // Lowercase the name once when populating the data store
+            const pokemon = { name: result.name.toLowerCase(), id };
             tempList.push(pokemon);
-            tempNameMap.set(result.name.toLowerCase(), id);
+            tempNameMap.set(pokemon.name, id);
           }
         }
         
@@ -535,8 +536,9 @@ class PokedexController {
     
     // 4. Fuzzy character matching with Levenshtein distance for typos
     let fuzzyMatches = [];
+    const lowerQuery = query.toLowerCase();
     for (const name of allNames) {
-      if (this._isFuzzyMatch(query, name) || this._hasTypoMatch(query, name)) {
+      if (this._isFuzzyMatch(lowerQuery, name) || this._hasTypoMatch(lowerQuery, name)) {
         fuzzyMatches.push(name);
         if (fuzzyMatches.length >= 100) break;
       }
@@ -558,9 +560,6 @@ class PokedexController {
   _isFuzzyMatch(query, target) {
     if (!query || !target) return false;
     
-    query = query.toLowerCase();
-    target = target.toLowerCase();
-    
     let queryIndex = 0;
     let targetIndex = 0;
     
@@ -581,8 +580,9 @@ class PokedexController {
    * @returns {boolean} - Whether it's a typo-tolerant match
    */
   _hasTypoMatch(query, target) {
-    const q = query.toLowerCase();
-    const t = target.toLowerCase();
+    // Both query and target are expected to be lowercase already
+    const q = query;
+    const t = target;
     
     // For short queries, be more restrictive
     if (q.length <= 2) return false;
