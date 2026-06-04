@@ -272,7 +272,7 @@ class UIController {
     this.state.lastDisplayedId = null;
 
     if (this.elements.detailsArea) {
-      this.elements.detailsArea.innerHTML = message;
+      this.elements.detailsArea.textContent = message;
     }
 
     if (type === "loading" && this.elements.mainScreen) {
@@ -287,7 +287,7 @@ class UIController {
 
   showError(message, logToConsole = true) {
     this.state.lastDisplayedId = null;
-    if (this.elements.detailsArea) this.elements.detailsArea.innerHTML = message;
+    if (this.elements.detailsArea) this.elements.detailsArea.textContent = message;
     
     // Always log to console for debugging
     if (logToConsole) {
@@ -785,13 +785,13 @@ class UIController {
   showWarningMessage(message) {
     // Warning messages are shown but not logged to console as errors
     this.state.lastDisplayedId = null;
-    if (this.elements.detailsArea) this.elements.detailsArea.innerHTML = message;
+    if (this.elements.detailsArea) this.elements.detailsArea.textContent = message;
     console.warn(message);
   }
   
   showInfoMessage(message) {
     this.state.lastDisplayedId = null;
-    if (this.elements.detailsArea) this.elements.detailsArea.innerHTML = message;
+    if (this.elements.detailsArea) this.elements.detailsArea.textContent = message;
   }
   
   _handleLoadMore(allItems, pageSize, listEl, loadMoreBtn, state, onSelect) {
