@@ -104,8 +104,12 @@ function _applyAttributes(el, attrs = {}) {
       else el.removeAttribute(key);
       // also set property if present
       try {
-        el[key] = value;
-      } catch (e) {}
+        if (key in el) {
+          el[key] = value;
+        }
+      } catch (e) {
+        console.warn(`Failed to set property '${key}' on element`, e);
+      }
       return;
     }
 
