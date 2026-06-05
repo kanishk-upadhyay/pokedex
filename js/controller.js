@@ -536,9 +536,9 @@ class PokedexController {
     
     // 4. Fuzzy character matching with Levenshtein distance for typos
     let fuzzyMatches = [];
-    const lowerQuery = query.toLowerCase();
+    // `query` is already lowercased in `_performSearch`
     for (const name of allNames) {
-      if (this._isFuzzyMatch(lowerQuery, name) || this._hasTypoMatch(lowerQuery, name)) {
+      if (this._isFuzzyMatch(query, name) || this._hasTypoMatch(query, name)) {
         fuzzyMatches.push(name);
         if (fuzzyMatches.length >= 100) break;
       }
@@ -553,8 +553,8 @@ class PokedexController {
   /**
    * Simple fuzzy matching algorithm
    * Checks if query characters appear in the target in the same order
-   * @param {string} query - Query string
-   * @param {string} target - Target string to match against
+   * @param {string} query - Query string (must be lowercase)
+   * @param {string} target - Target string to match against (must be lowercase)
    * @returns {boolean} - Whether it's a fuzzy match
    */
   _isFuzzyMatch(query, target) {
@@ -575,8 +575,8 @@ class PokedexController {
   
   /**
    * Check for typo tolerance using Levenshtein distance
-   * @param {string} query - Query string
-   * @param {string} target - Target string to match against
+   * @param {string} query - Query string (must be lowercase)
+   * @param {string} target - Target string to match against (must be lowercase)
    * @returns {boolean} - Whether it's a typo-tolerant match
    */
   _hasTypoMatch(query, target) {
