@@ -467,6 +467,39 @@ body {
     font-size: 0.9em;
 }
 
+/* Sprite skeleton: perceived-speed placeholder shown until the sprite paints */
+.sprite-skeleton {
+    position: absolute;
+    inset: 8%;
+    border-radius: 8px;
+    background-image: linear-gradient(
+        100deg,
+        rgba(255, 255, 255, 0.05) 30%,
+        rgba(255, 255, 255, 0.18) 50%,
+        rgba(255, 255, 255, 0.05) 70%
+    );
+    background-size: 200% 100%;
+    animation: sprite-shimmer 1.1s ease-in-out infinite;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.sprite-skeleton.failed {
+    animation: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #00ff00;
+    font-size: 0.9em;
+    background-image: none;
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+@keyframes sprite-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
 /* Search area styling */
 .pokemon-search-area {
     display: flex;
