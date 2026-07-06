@@ -376,7 +376,6 @@ class UIController {
     }
 
     this.state.lastDisplayedId = pokemon.id;
-    console.log("Displaying Pokemon:", pokemon.name, pokemon.id, pokemon.sprites);
     this.elements.mainScreen.innerHTML = "";
 
     if (pokemon.sprites?.front_default) {
@@ -398,7 +397,6 @@ class UIController {
       
       // Once image loads, hide the loading indicator
       imageEl.onload = () => {
-        console.log("Image loaded successfully:", pokemon.name, pokemon.sprites.front_default);
         if (this.state.lastDisplayedId === pokemon.id) {
           loadingIndicator.remove();
         }
@@ -735,9 +733,8 @@ class UIController {
   renderPaginatedSuggestions(allItems = [], pageSize = 10, onSelect) {
     if (!this.elements.detailsArea || !Array.isArray(allItems) || allItems.length === 0) return null;
     
-    const activeOnSelect = onSelect || ((selectedItem) => {
-      // Default handler if no onSelect provided
-      console.log("Selected item:", selectedItem);
+    const activeOnSelect = onSelect || (() => {
+      // No-op default when no onSelect handler is provided
     });
 
     // Clear existing content
