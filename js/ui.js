@@ -559,14 +559,6 @@ class UIController {
     );
   }
 
-  _getTypeChips(pokemon) {
-    return (pokemon.types || [])
-      .map(
-        (t) => `<span class="type-chip ${t.type.name}">${t.type.name}</span>`,
-      )
-      .join(" ");
-  }
-
   _getMovesString(pokemon) {
     return (pokemon.moves || [])
       .slice(0, 4)
