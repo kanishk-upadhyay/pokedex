@@ -418,6 +418,20 @@ class UIController {
       );
     }
 
+    this._renderDetails(pokemon);
+  }
+
+  /**
+   * Rebuild only the text details panel (name, types, entry, abilities,
+   * moves, evolutions). Used for the initial render and to patch in species
+   * and evolution data once it arrives, without touching the sprite.
+   */
+  updatePokemonDetails(pokemon) {
+    if (!this.elements.detailsArea) return;
+    this._renderDetails(pokemon);
+  }
+
+  _renderDetails(pokemon) {
     // Build details using element builders instead of string templates
     const primaryType = this._getPrimaryType(pokemon);
 
