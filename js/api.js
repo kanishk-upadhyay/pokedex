@@ -30,29 +30,33 @@ export class Cache {
   }
 
   set(key, value) {
-    // Clean expired entries if needed
-    if (this.cache.size >= this.maxSize) {
+    // Refresh recency: re-inserting moves an existing key to the newest position
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.maxSize) {
+      // Drop expired entries first, then evict the least-recently-used one
       this._cleanupExpired();
+      if (this.cache.size >= this.maxSize) {
+        const lruKey = this.cache.keys().next().value;
+        this.cache.delete(lruKey);
+      }
     }
-    
-    // Remove oldest entry if at max size
-    if (this.cache.size >= this.maxSize) {
-      const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
-    }
-    
+
     this.cache.set(key, { value, timestamp: Date.now() });
   }
 
   get(key) {
     const entry = this.cache.get(key);
     if (!entry) return null;
-    
+
     if (Date.now() - entry.timestamp > this.expiry) {
       this.cache.delete(key);
       return null;
     }
-    
+
+    // Mark as most-recently-used by moving it to the newest position
+    this.cache.delete(key);
+    this.cache.set(key, entry);
     return entry.value;
   }
   
