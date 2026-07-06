@@ -521,7 +521,7 @@ class PokedexController {
       // Check if all query tokens are present in name tokens (in any order)
       if (queryTokens.every(queryToken => 
         nameTokens.some(nameToken => 
-          nameToken.startsWith(queryToken) || this._computeLevenshtein(queryToken, nameToken) <= 1
+          nameToken.startsWith(queryToken) || this._computeLevenshtein(queryToken, nameToken, 1) <= 1
         )
       )) {
         tokenMatches.push(name);
@@ -590,7 +590,7 @@ class PokedexController {
     // Try different substrings of the target to find a close match
     for (let i = 0; i <= t.length - q.length; i++) {
       const substr = t.substring(i, i + q.length);
-      if (this._computeLevenshtein(q, substr) <= 1) {
+      if (this._computeLevenshtein(q, substr, 1) <= 1) {
         return true;
       }
     }
@@ -598,7 +598,7 @@ class PokedexController {
     // Also check if the full query is close to a prefix of the target
     if (t.length >= q.length) {
       const prefix = t.substring(0, q.length);
-      if (this._computeLevenshtein(q, prefix) <= 1) {
+      if (this._computeLevenshtein(q, prefix, 1) <= 1) {
         return true;
       }
     }
@@ -606,7 +606,7 @@ class PokedexController {
     // Check the reverse case too (target in query)
     if (q.length >= t.length) {
       const prefix = q.substring(0, t.length);
-      if (this._computeLevenshtein(t, prefix) <= 1) {
+      if (this._computeLevenshtein(t, prefix, 1) <= 1) {
         return true;
       }
     }
@@ -615,38 +615,54 @@ class PokedexController {
   }
   
   /**
-   * Compute Levenshtein distance between two strings
+   * Compute Levenshtein distance between two strings.
+   *
+   * Uses two rolling rows instead of a full matrix (O(min(m, n)) space) and,
+   * when a threshold is given, bails out early once every value in the current
+   * row exceeds it. Callers that only care whether the distance is within a
+   * small bound (e.g. <= 1) should pass that bound as the threshold.
    * @param {string} s1 - First string
    * @param {string} s2 - Second string
-   * @returns {number} - The edit distance
+   * @param {number} [threshold=Infinity] - Stop early once the distance is known
+   *   to exceed this; returns threshold + 1 in that case.
+   * @returns {number} - The edit distance (or threshold + 1 if it exceeds threshold)
    */
-  _computeLevenshtein(s1, s2) {
+  _computeLevenshtein(s1, s2, threshold = Infinity) {
     const m = s1.length;
     const n = s2.length;
-    
+
     if (m === 0) return n;
     if (n === 0) return m;
-    
-    // Create a matrix to store distances
-    const d = Array(m + 1).fill().map(() => Array(n + 1).fill(0));
-    
-    // Initialize first row and column
-    for (let i = 0; i <= m; i++) d[i][0] = i;
-    for (let j = 0; j <= n; j++) d[0][j] = j;
-    
-    // Fill the matrix
+
+    // Keep s1 the shorter string so a row stays as small as possible
+    if (m > n) return this._computeLevenshtein(s2, s1, threshold);
+
+    let prevRow = new Array(n + 1);
+    let currRow = new Array(n + 1);
+    for (let j = 0; j <= n; j++) prevRow[j] = j;
+
     for (let i = 1; i <= m; i++) {
+      currRow[0] = i;
+      let minInRow = i;
+
       for (let j = 1; j <= n; j++) {
         const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
-        d[i][j] = Math.min(
-          d[i - 1][j] + 1,        // deletion
-          d[i][j - 1] + 1,        // insertion
-          d[i - 1][j - 1] + cost  // substitution
+        currRow[j] = Math.min(
+          prevRow[j] + 1,        // deletion
+          currRow[j - 1] + 1,    // insertion
+          prevRow[j - 1] + cost  // substitution
         );
+        if (currRow[j] < minInRow) minInRow = currRow[j];
       }
+
+      // The row minimum never decreases as i grows, so once it passes the
+      // threshold the final distance cannot come back under it.
+      if (minInRow > threshold) return threshold + 1;
+
+      [prevRow, currRow] = [currRow, prevRow];
     }
-    
-    return d[m][n];
+
+    return prevRow[n];
   }
 
   preloadAdjacentPokemon(currentId) {
