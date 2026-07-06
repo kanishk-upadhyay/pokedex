@@ -356,6 +356,16 @@ class PokedexController {
   }
 
   async getPokemonData(idOrName, options = {}) {
+    const base = await this.getPokemonBase(idOrName, options);
+    if (base && !base.speciesData) await this.enrichPokemon(base, options);
+    return base;
+  }
+
+  /**
+   * Fetch the core Pokemon record (sprite, types, abilities, moves) - a single
+   * API call. Enough to render the sprite and primary details immediately.
+   */
+  async getPokemonBase(idOrName, options = {}) {
     const isNumber =
       typeof idOrName === "number" || /^\d+$/.test(String(idOrName));
     const key = isNumber ? Number(idOrName) : `name_${idOrName.toLowerCase()}`;
@@ -368,16 +378,6 @@ class PokedexController {
 
     try {
       const data = await this.api.getPokemon(idOrName, options);
-      if (data.species?.url) {
-        data.speciesData = await this.api.fetchData(data.species.url, options);
-        if (data.speciesData?.evolution_chain?.url) {
-          data.evolutionData = await this.api.fetchData(
-            data.speciesData.evolution_chain.url,
-            options,
-          );
-        }
-      }
-
       const nameLower = data.name.toLowerCase();
       this.state.pokemonCache.set(data.id, data);
       this.state.pokemonCache.set(`name_${nameLower}`, data);
@@ -391,6 +391,23 @@ class PokedexController {
       console.error(`Error fetching Pokemon data for ${idOrName}:`, err);
       throw err;
     }
+  }
+
+  /**
+   * Fetch the secondary data (species flavor text and evolution chain) and
+   * attach it to an already-fetched base record. Mutates the cached object in
+   * place, so the cache entry becomes the enriched version.
+   */
+  async enrichPokemon(data, options = {}) {
+    if (!data || data.speciesData || !data.species?.url) return data;
+    data.speciesData = await this.api.fetchData(data.species.url, options);
+    if (data.speciesData?.evolution_chain?.url) {
+      data.evolutionData = await this.api.fetchData(
+        data.speciesData.evolution_chain.url,
+        options,
+      );
+    }
+    return data;
   }
 
   scheduleSearch() {
