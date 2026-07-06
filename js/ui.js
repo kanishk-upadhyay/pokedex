@@ -622,7 +622,12 @@ class UIController {
       const out = [node];
 
       if (chain.evolves_to && chain.evolves_to.length > 0) {
-        out.push(...build(chain.evolves_to[0], currentName));
+        // Branched evolutions (e.g. Eevee) have several next stages; render
+        // each one, separated by "/", instead of only the first branch.
+        chain.evolves_to.forEach((branch, i) => {
+          if (i > 0) out.push(el("span", { class: "evolution-separator", "aria-hidden": "true" }, " / "));
+          out.push(...build(branch, currentName));
+        });
       }
 
       return out;
