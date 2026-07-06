@@ -287,34 +287,33 @@ class PokedexController {
       // Use temporary variables to avoid partial state updates
       const tempList = [];
       const tempNameMap = new Map();
-      let url = `pokemon?limit=${PAGE_SIZE}&offset=0`;
-      let hasMore = true;
 
-      while (hasMore) {
-        const data = await this.api.fetchData(url);
-        
-        // Process this page of data
-        for (const result of data.results) {
+      // Fetch the first page to learn the total count, then request the
+      // remaining pages concurrently instead of walking `next` one at a time.
+      const firstPage = await this.api.fetchData(
+        `pokemon?limit=${PAGE_SIZE}&offset=0`,
+      );
+      const total = firstPage.count;
+
+      const restRequests = [];
+      for (let offset = PAGE_SIZE; offset < total; offset += PAGE_SIZE) {
+        restRequests.push(
+          this.api.fetchData(`pokemon?limit=${PAGE_SIZE}&offset=${offset}`),
+        );
+      }
+      const restPages = await Promise.all(restRequests);
+
+      // Iterate pages in offset order so the list stays sorted by id
+      for (const page of [firstPage, ...restPages]) {
+        for (const result of page.results) {
           const id = parseInt(result.url.split("/").slice(-2, -1)[0], 10);
           if (!isNaN(id)) {
-            const pokemon = { name: result.name, id };
-            tempList.push(pokemon);
+            tempList.push({ name: result.name, id });
             tempNameMap.set(result.name.toLowerCase(), id);
           }
         }
-        
-        // Yield control back to the browser periodically
-        if (data.results.length > 0) {
-          await this.yieldToMain();
-        }
-        
-        if (data.next) {
-          url = data.next;
-        } else {
-          hasMore = false;
-        }
       }
-      
+
       // Only update state if all data was loaded successfully
       this.state.pokemonList = tempList;
       this.state.pokemonNameMap = tempNameMap;
