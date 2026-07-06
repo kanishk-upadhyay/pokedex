@@ -135,14 +135,10 @@ export class RequestQueue {
       await new Promise(resolve => setTimeout(resolve, delay));
     }
 
-    try {
-      const response = await fetch(url, options);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      this.lastRequestTime = Date.now();
-      return await response.json();
-    } catch (err) {
-      throw err;
-    }
+    const response = await fetch(url, options);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    this.lastRequestTime = Date.now();
+    return await response.json();
   }
 }
 
