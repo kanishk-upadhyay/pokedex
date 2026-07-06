@@ -383,7 +383,7 @@ class UIController {
       // Clear screen and show loading indicator
       this.elements.mainScreen.innerHTML = "";
       
-      const imageEl = img(pokemon.sprites.front_default, {
+      const imageEl = img(this._spriteUrl(pokemon.sprites.front_default), {
         class: "pokemon-image fullscreen",
         alt: pokemon.name || "",
         loading: "eager", // Change to eager for immediate loading
@@ -518,6 +518,21 @@ class UIController {
    * Handle clicking on a Pokemon sprite to toggle front/back view
    * @private
    */
+  /**
+   * Rewrite PokeAPI sprite URLs to the jsDelivr CDN mirror of the same repo.
+   * raw.githubusercontent.com aggressively rate-limits (HTTP 429), which makes
+   * sprites fail intermittently; the CDN mirror is not rate-limited.
+   * @param {string} url - Original sprite URL
+   * @returns {string} - CDN URL, or the input unchanged if it is not a raw URL
+   */
+  _spriteUrl(url) {
+    if (typeof url !== "string") return url;
+    return url.replace(
+      "https://raw.githubusercontent.com/PokeAPI/sprites/master/",
+      "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/",
+    );
+  }
+
   _handleSpriteClick(pokemon, img) {
     // Clear any existing timeout and message elements to prevent conflicts
     if (this.state.spriteMessageTimeout) {
@@ -533,7 +548,7 @@ class UIController {
     
     if (this.state.showingFront) {
       if (pokemon.sprites.back_default) {
-        img.src = pokemon.sprites.back_default;
+        img.src = this._spriteUrl(pokemon.sprites.back_default);
         this.state.showingFront = false;
       } else {
         // Show message that back image is not available
@@ -550,7 +565,7 @@ class UIController {
         }, 1500);
       }
     } else {
-      img.src = pokemon.sprites.front_default;
+      img.src = this._spriteUrl(pokemon.sprites.front_default);
       this.state.showingFront = true;
     }
   }
