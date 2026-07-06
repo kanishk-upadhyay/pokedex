@@ -385,27 +385,26 @@ class UIController {
       const imageEl = img(this._spriteUrl(pokemon.sprites.front_default), {
         class: "pokemon-image fullscreen",
         alt: pokemon.name || "",
-        loading: "eager", // Change to eager for immediate loading
+        loading: "eager",
+        decoding: "async",
       });
 
-      // Add image to DOM immediately - browser will show it when loaded
+      // Shimmer skeleton, tinted by the primary type, shown until the sprite paints
+      const skeleton = el("div", {
+        class: `sprite-skeleton color-${this._getPrimaryType(pokemon)}`,
+      });
+      this.elements.mainScreen.appendChild(skeleton);
       this.elements.mainScreen.appendChild(imageEl);
-      
-      // Add loading indicator
-      const loadingIndicator = el("div", { class: "loading-indicator" }, "Loading...");
-      this.elements.mainScreen.appendChild(loadingIndicator);
-      
-      // Once image loads, hide the loading indicator
+
       imageEl.onload = () => {
-        if (this.state.lastDisplayedId === pokemon.id) {
-          loadingIndicator.remove();
-        }
+        if (this.state.lastDisplayedId === pokemon.id) skeleton.remove();
       };
-      
+
       imageEl.onerror = (err) => {
         console.error("Image failed to load:", pokemon.name, pokemon.sprites.front_default, err);
         if (this.state.lastDisplayedId === pokemon.id) {
-          loadingIndicator.textContent = "Image failed to load";
+          skeleton.classList.add("failed");
+          skeleton.textContent = "Sprite unavailable";
         }
       };
 
