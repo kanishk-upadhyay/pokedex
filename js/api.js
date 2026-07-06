@@ -11,7 +11,7 @@
 // Configuration Constants
 export const API_BASE_URL = "https://pokeapi.co/api/v2";
 export const MIN_REQUEST_INTERVAL = 50;
-export const SEARCH_DEBOUNCE_MS = 250;
+export const SEARCH_DEBOUNCE_MS = 120;
 export const PRELOAD_MAX_ADJACENT = 3;
 export const CACHE_EXPIRATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 export const CACHE_MAX_SIZE = 300;
