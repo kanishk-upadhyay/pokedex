@@ -76,6 +76,7 @@ function _applyAttributes(el, attrs = {}) {
         try {
           el[pKey] = pVal;
         } catch (e) {
+          console.warn(`Failed to set property '${pKey}' on element:`, el, `with value:`, pVal, e);
           // fallback to attribute if property fails
           el.setAttribute(pKey, String(pVal));
         }
@@ -104,8 +105,12 @@ function _applyAttributes(el, attrs = {}) {
       else el.removeAttribute(key);
       // also set property if present
       try {
-        el[key] = value;
-      } catch (e) {}
+        if (key in el) {
+          el[key] = value;
+        }
+      } catch (e) {
+        console.warn(`Failed to set property '${key}' on element:`, el, `with value:`, value, e);
+      }
       return;
     }
 
