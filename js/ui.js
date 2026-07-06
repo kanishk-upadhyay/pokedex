@@ -110,9 +110,8 @@ class UIController {
       const btn = document.createElement("button");
       btn.className = "blue-button";
       btn.dataset.value = String(n);
-      
+      btn.setAttribute("aria-label", `Enter ${n}`);
 
-      
       const handleButtonInput = (e) => {
         e.preventDefault();
         
