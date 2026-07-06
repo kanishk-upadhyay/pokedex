@@ -4,7 +4,7 @@
   - Simple network-first strategy for all requests
 */
 
-const CACHE_NAME = "pokedex-v1";
+const CACHE_NAME = "pokedex-v2";
 
 const STATIC_FILES = [
   "/",
