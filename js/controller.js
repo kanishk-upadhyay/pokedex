@@ -257,7 +257,7 @@ class PokedexController {
   }
 
   async loadPokemonList() {
-    const { key, tsKey, ttl } = this.config.storage;
+    const { nameListKey: key, nameListTTL: ttl } = this.config.storage;
 
     const countData = await this.api.getPokemonList(1);
     const apiCount = countData.count;
@@ -278,7 +278,7 @@ class PokedexController {
   }
 
   async progressivelyLoadPokemonList() {
-    const { key } = this.config.storage;
+    const { nameListKey: key } = this.config.storage;
     const PAGE_SIZE = 200; // Smaller page size for progressive loading
     
     console.log("Loading Pokédex database (this may take a moment)...");
