@@ -45,6 +45,7 @@ class PokedexController {
       pokemonNames: [],
       totalPokemon: 0,
       isNavigating: false,
+      initialShown: false,
       searchTimeout: null,
       searchAbortController: null,
     };
@@ -159,13 +160,10 @@ class PokedexController {
   togglePokedex() {
     const isNowOpen = this.ui.togglePokedex();
 
-    if (isNowOpen) {
-      // Don't automatically focus the search bar - let user do it manually
-      // This allows the existing Pokémon name to remain until user explicitly focuses to type
-
-      if (this.state.pokemonList.length > 0) {
-        this.loadStarterPokemon();
-      }
+    if (isNowOpen && !this.state.initialShown) {
+      // Show a Pokémon immediately on first open. This no longer waits for the
+      // full name list to finish loading (the list is only needed for search).
+      this.loadStarterPokemon();
     }
   }
 
@@ -222,33 +220,20 @@ class PokedexController {
   }
 
   loadStarterPokemon() {
-    // Load a random starter Pokémon including popular choices
+    this.state.initialShown = true;
+
+    // Popular starters. These are constant ids, so we can fetch one immediately
+    // without waiting for the full name list to load.
     const starterIds = [1, 2, 3,   // Bulbasaur family
-                       4, 5, 6,   // Charmander family  
+                       4, 5, 6,   // Charmander family
                        7, 8, 9,   // Squirtle family
                        25, 26,    // Pikachu, Raichu
                        129, 130,  // Magikarp, Gyarados
                        150, 151]; // Mewtwo, Mew
-                       
-    // Only choose from starters that exist in the list
-    const availableStarters = this.state.pokemonList
-      .filter(p => starterIds.includes(p.id));
-    
-    let pokemonToLoad;
-    
-    if (availableStarters.length > 0) {
-      // Pick a random starter from our enhanced list
-      const randomStarter = availableStarters[Math.floor(Math.random() * availableStarters.length)];
-      pokemonToLoad = randomStarter;
-    } else {
-      // Fallback to any random Pokémon if starters aren't available
-      const randomIndex = Math.floor(
-        Math.random() * this.state.pokemonList.length,
-      );
-      pokemonToLoad = this.state.pokemonList[randomIndex];
-    }
-    
-    this.fetchPokemonById(pokemonToLoad.id).catch((err) => {
+
+    const id = starterIds[Math.floor(Math.random() * starterIds.length)];
+
+    this.fetchPokemonById(id).catch((err) => {
       if (err?.name !== "AbortError") {
         this.ui.showWarningMessage("Failed to load starter Pokémon");
         console.error("Failed to fetch starter Pokémon:", err);
@@ -326,8 +311,9 @@ class PokedexController {
       }
       // State remains unchanged if error occurs during loading
     }
-    // After loading the list, if the pokedex is open, load a starter Pokemon
-    if (this.ui.isPokedexOpen() && this.state.pokemonList.length > 0) {
+    // If the pokedex was opened while the list was still loading and nothing
+    // has been shown yet, load a starter now.
+    if (this.ui.isPokedexOpen() && !this.state.initialShown) {
       this.loadStarterPokemon();
     }
   }
