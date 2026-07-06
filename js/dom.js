@@ -139,7 +139,7 @@ function el(tag, attrs = {}, ...children) {
   // Append children safely
   children.flat(1).forEach((c) => {
     if (c === null || c === undefined || c === false) return;
-    node.appendChild(isNode(c) ? c : text(c));
+    node.append(c);
   });
 
   return node;
