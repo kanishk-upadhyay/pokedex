@@ -728,9 +728,20 @@ class PokedexController {
       .slice(0, this.config.app.maxPreloadPokemon); // Limit number to preload
 
     if (preloadIds.length > 0) {
-      // Use Promise.allSettled to continue preloading even if some fail
+      // Preload data and warm the sprite image so navigation shows it instantly.
+      // Promise.allSettled keeps going even if some requests fail.
       await Promise.allSettled(
-        preloadIds.map(id => this.getPokemonData(id).catch(() => {}))
+        preloadIds.map((id) =>
+          this.getPokemonData(id)
+            .then((data) => {
+              const front = data?.sprites?.front_default;
+              if (front) {
+                const warm = new Image();
+                warm.src = this.ui._spriteUrl(front);
+              }
+            })
+            .catch(() => {})
+        )
       );
     }
   }
