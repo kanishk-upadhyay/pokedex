@@ -342,10 +342,28 @@ class PokedexController {
   async fetchPokemonById(id, options = {}) {
     try {
       this.ui.showLoading("Loading...");
-      const pokemon = await this.getPokemonData(id, options);
-      this.state.currentId = pokemon.id;
-      this.ui.setSearchValue(pokemon.name);
-      await this.ui.displayPokemon(pokemon);
+      // Render the sprite and core details from a single request first...
+      const base = await this.getPokemonBase(id, options);
+      this.state.currentId = base.id;
+      this.ui.setSearchValue(base.name);
+      await this.ui.displayPokemon(base);
+
+      // ...then fetch species + evolution and patch the details panel in,
+      // as long as the user has not navigated away in the meantime.
+      if (!base.speciesData) {
+        this.enrichPokemon(base, options)
+          .then((full) => {
+            if (this.state.currentId === full.id) {
+              this.ui.updatePokemonDetails(full);
+            }
+          })
+          .catch((err) => {
+            if (err?.name !== "AbortError") {
+              console.error("Failed to load Pokemon details:", err);
+            }
+          });
+      }
+
       this.preloadAdjacentPokemon(id);
     } catch (err) {
       if (err?.name === "AbortError") throw err;
