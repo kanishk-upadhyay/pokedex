@@ -118,7 +118,7 @@ class PokedexController {
     if (!this.ui.isPokedexOpen()) return;
 
     // Don't handle arrow keys when search input is focused (for text editing)
-    if (this.ui.searchInput && document.activeElement === this.ui.searchInput) {
+    if (this.ui.elements.searchInput && document.activeElement === this.ui.elements.searchInput) {
       if (key === "ArrowUp" || key === "ArrowDown" || key === "ArrowLeft" || key === "ArrowRight") {
         return; // Let the browser handle arrow keys for text cursor movement
       }
