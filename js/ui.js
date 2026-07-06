@@ -91,6 +91,8 @@ class UIController {
     );
     this.elements.detailsArea = document.querySelector(".pokemon-details-area");
     this.elements.blueButtonGrid = document.querySelector(".blue-button-grid");
+    this.elements.shortcutsOverlay = document.querySelector(".shortcuts-overlay");
+    this.elements.closeShortcuts = document.querySelector(".shortcuts-close");
   }
 
   /**
