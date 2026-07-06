@@ -281,7 +281,6 @@ class PokedexController {
     const { nameListKey: key } = this.config.storage;
     const PAGE_SIZE = 200; // Smaller page size for progressive loading
     
-    console.log("Loading Pokédex database (this may take a moment)...");
 
     try {
       // Use temporary variables to avoid partial state updates
@@ -320,7 +319,6 @@ class PokedexController {
       this.state.pokemonNames = Array.from(tempNameMap.keys());
       this.state.totalPokemon = tempList.length;
       StorageHelper.saveToStorage(key, tempList);
-      console.log("Pokédex database loaded successfully!");
     } catch (err) {
       if (err?.name !== "AbortError") {
         this.ui.showError("Error loading Pokédex database. Try refreshing.");
