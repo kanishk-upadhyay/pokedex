@@ -47,6 +47,7 @@ A modern, interactive, and feature-rich Pokédex web application built with vani
 
 The application follows a modular architecture with clear separation of concerns:
 
+*   **`index.js`:** Application entry point; instantiates the controller and boots the app
 *   **`controller.js`:** Main application orchestrator, manages state and coordinates between modules
 *   **`ui.js`:** Handles all DOM manipulation, rendering, and user interactions
 *   **`api.js`:** Manages API communication, caching, and rate limiting
