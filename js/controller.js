@@ -163,7 +163,7 @@ class PokedexController {
     if (isNowOpen && !this.state.initialShown) {
       // Show a Pokémon immediately on first open. This no longer waits for the
       // full name list to finish loading (the list is only needed for search).
-      this.loadStarterPokemon();
+      this.loadInitialPokemon();
     }
   }
 
@@ -217,6 +217,22 @@ class PokedexController {
     }
 
     this.state.isNavigating = false;
+  }
+
+  loadInitialPokemon() {
+    this.state.initialShown = true;
+
+    // Restore the last Pokémon the user viewed, if any; otherwise a starter.
+    let lastId = NaN;
+    try { lastId = parseInt(localStorage.getItem("pokedex_last_id"), 10); } catch (e) {}
+
+    if (Number.isInteger(lastId) && lastId > 0) {
+      this.fetchPokemonById(lastId).catch((err) => {
+        if (err?.name !== "AbortError") this.loadStarterPokemon();
+      });
+    } else {
+      this.loadStarterPokemon();
+    }
   }
 
   loadStarterPokemon() {
@@ -314,7 +330,7 @@ class PokedexController {
     // If the pokedex was opened while the list was still loading and nothing
     // has been shown yet, load a starter now.
     if (this.ui.isPokedexOpen() && !this.state.initialShown) {
-      this.loadStarterPokemon();
+      this.loadInitialPokemon();
     }
   }
   
@@ -333,6 +349,7 @@ class PokedexController {
       this.state.currentId = base.id;
       this.ui.setSearchValue(base.name);
       await this.ui.displayPokemon(base);
+      try { localStorage.setItem("pokedex_last_id", String(base.id)); } catch (e) {}
 
       // ...then fetch species + evolution and patch the details panel in,
       // as long as the user has not navigated away in the meantime.
