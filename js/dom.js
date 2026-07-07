@@ -4,7 +4,6 @@
  * Small helpers to reduce repetitive DOM boilerplate.
  * - `el(tag, attrs, ...children)` creates elements with attributes and children
  * - `img(src, attrs)` creates image elements with lazy loading
- * - `text(value)` creates safe text nodes
  */
 
 function isNode(o) {
@@ -12,17 +11,6 @@ function isNode(o) {
     o instanceof Node ||
     (o && typeof o === "object" && typeof o.nodeType === "number")
   );
-}
-
-/**
- * Create a Text node from a value.
- * If the value is already a Node, it is returned as-is.
- * If the value is null/undefined/false, it is ignored by returning null.
- */
-function text(value) {
-  if (value === null || value === undefined || value === false) return null;
-  if (isNode(value)) return value;
-  return document.createTextNode(String(value));
 }
 
 /**
@@ -70,19 +58,6 @@ function _applyAttributes(el, attrs = {}) {
       return;
     }
 
-    // props (DOM properties)
-    if (key === "props" && typeof value === "object") {
-      Object.entries(value).forEach(([pKey, pVal]) => {
-        try {
-          el[pKey] = pVal;
-        } catch (e) {
-          console.warn(`Failed to set property '${pKey}' on element:`, el, `with value:`, pVal, e);
-          // fallback to attribute if property fails
-          el.setAttribute(pKey, String(pVal));
-        }
-      });
-      return;
-    }
 
     // Event listeners: onClick, onclick, onkeydown etc.
     if (/^on[A-Z0-9_].*/.test(key) || /^on[A-Za-z0-9_].*/.test(key)) {
@@ -162,4 +137,4 @@ function img(src, attrs = {}) {
   return el("img", base);
 }
 
-export { el, img, text };
+export { el, img };

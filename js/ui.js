@@ -690,56 +690,6 @@ class UIController {
     }
   }
 
-  renderSuggestions(container, items = [], onSelect, options = {}) {
-    if (!container || !Array.isArray(items) || items.length === 0) return null;
-
-    const { max = 10, clearFirst = true } = options;
-    if (clearFirst) container.innerHTML = "";
-
-    const listEl = el("ul", {
-      class: "suggestions-list",
-      role: "listbox",
-      tabindex: 0,
-      "aria-label": "Search suggestions",
-    });
-
-    const rendered = items
-      .map(this._normalizeItem.bind(this))
-      .filter(Boolean)
-      .slice(0, Math.max(0, Number(max) || 10))
-      .map((it) => this._createSuggestionItem(it, onSelect));
-
-    if (!rendered.length) return null;
-
-    const frag = document.createDocumentFragment();
-    rendered.forEach((r) => frag.appendChild(r));
-    listEl.appendChild(frag);
-    container.appendChild(listEl);
-
-    listEl.addEventListener("keydown", (ev) => {
-      const active = document.activeElement;
-      if (!listEl.contains(active)) return;
-
-      if (ev.key === "ArrowDown" || ev.key === "Down") {
-        ev.preventDefault();
-        const next = active.closest("li")?.nextElementSibling;
-        if (next) {
-          const btn = next.querySelector("button, [role='option']");
-          btn?.focus();
-        }
-      } else if (ev.key === "ArrowUp" || ev.key === "Up") {
-        ev.preventDefault();
-        const prev = active.closest("li")?.previousElementSibling;
-        if (prev) {
-          const btn = prev.querySelector("button, [role='option']");
-          btn?.focus();
-        }
-      }
-    });
-
-    return listEl;
-  }
-
   /**
    * Renders paginated search suggestions with dynamic sizing and click handling
    * Creates a responsive grid layout for suggestions on larger screens
@@ -765,7 +715,6 @@ class UIController {
     const state = {
       allItems,
       pageSize,
-      currentPage: 0,
       loadedCount: 0
     };
     
@@ -811,20 +760,11 @@ class UIController {
     return container;
   }
   
-  showErrorMessage(message) {
-    this.showError(message, true);
-  }
-  
   showWarningMessage(message) {
     // Warning messages are shown but not logged to console as errors
     this.state.lastDisplayedId = null;
     if (this.elements.detailsArea) this.elements.detailsArea.textContent = message;
     console.warn(message);
-  }
-  
-  showInfoMessage(message) {
-    this.state.lastDisplayedId = null;
-    if (this.elements.detailsArea) this.elements.detailsArea.textContent = message;
   }
   
   _handleLoadMore(allItems, pageSize, listEl, loadMoreBtn, state, onSelect) {
@@ -864,12 +804,6 @@ class UIController {
       loadMoreBtn.textContent = `Load more (${remaining} remaining)`;
       loadMoreBtn.disabled = false; // Re-enable button
     }
-  }
-
-  clearSuggestions(container) {
-    if (!container) return;
-    const lists = Array.from(container.querySelectorAll(".suggestions-list"));
-    lists.forEach((l) => l.remove());
   }
 
   _normalizeItem(item) {
