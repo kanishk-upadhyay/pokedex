@@ -163,6 +163,7 @@ export class PokemonAPI {
     const { minRequestInterval = MIN_REQUEST_INTERVAL } = options;
     this.baseUrl = API_BASE_URL;
     this.requestQueue = new RequestQueue(minRequestInterval);
+    this._inFlight = new Map();
   }
 
   async fetchData(endpoint, options = {}) {
@@ -171,12 +172,26 @@ export class PokemonAPI {
         ? endpoint
         : `${API_BASE_URL}/${String(endpoint).replace(/^\//, "")}`;
 
-    try {
-      return await this.requestQueue.enqueue(url, options);
-    } catch (error) {
+    // Coalesce concurrent identical requests (e.g. several Pokemon sharing one
+    // evolution chain during preload). Skip when an abort signal is present so
+    // one caller aborting cannot cancel another caller's request.
+    if (!options.signal && this._inFlight.has(url)) {
+      return this._inFlight.get(url);
+    }
+
+    const request = this.requestQueue.enqueue(url, options).catch((error) => {
       console.error(`API call failed for ${url}:`, error);
       throw error;
+    });
+
+    if (!options.signal) {
+      this._inFlight.set(url, request);
+      request.finally(() => {
+        if (this._inFlight.get(url) === request) this._inFlight.delete(url);
+      });
     }
+
+    return request;
   }
 
   async getPokemon(idOrName, options = {}) {
