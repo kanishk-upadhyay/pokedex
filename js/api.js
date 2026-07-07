@@ -208,31 +208,3 @@ export class PokemonAPI {
   }
 }
 
-/**
- * Performance monitoring utilities
- */
-export class PerformanceLogger {
-  static measureFunction(fn, name) {
-    return async function (...args) {
-      const start = performance.now();
-      try {
-        const result = await fn.apply(this, args);
-        const end = performance.now();
-        console.debug(`${name} took ${end - start} milliseconds`);
-        return result;
-      } catch (error) {
-        const end = performance.now();
-        console.error(`${name} failed after ${end - start} milliseconds:`, error);
-        throw error;
-      }
-    };
-  }
-
-  static measureCachePerformance(cache, operation) {
-    const start = performance.now();
-    const result = operation();
-    const end = performance.now();
-    console.debug(`Cache operation took ${end - start} milliseconds`);
-    return result;
-  }
-}
