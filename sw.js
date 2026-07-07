@@ -4,7 +4,7 @@
   - Simple network-first strategy for all requests
 */
 
-const CACHE_NAME = "pokedex-v2";
+const CACHE_NAME = "pokedex-v3";
 
 const STATIC_FILES = [
   "/",
@@ -97,6 +97,24 @@ self.addEventListener("fetch", (event) => {
         // Return cached response if available, otherwise wait for network
         return cachedResponse || fetchPromise;
       })
+    );
+    return;
+  }
+
+  // Cache-first for images (sprites are immutable). Cross-origin sprite
+  // responses are opaque (status 0), so cache on ok OR opaque.
+  if (event.request.destination === "image") {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(event.request).then((response) => {
+          if (response && (response.ok || response.type === "opaque")) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        });
+      }),
     );
     return;
   }
