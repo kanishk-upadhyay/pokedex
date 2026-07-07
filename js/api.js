@@ -60,18 +60,6 @@ export class Cache {
     return entry.value;
   }
   
-  has(key) {
-    const entry = this.cache.get(key);
-    if (!entry) return false;
-    
-    if (Date.now() - entry.timestamp > this.expiry) {
-      this.cache.delete(key);
-      return false;
-    }
-    
-    return true;
-  }
-  
   _cleanupExpired() {
     const now = Date.now();
     for (const [key, entry] of this.cache) {
@@ -79,14 +67,6 @@ export class Cache {
         this.cache.delete(key);
       }
     }
-  }
-  
-  clear() {
-    this.cache.clear();
-  }
-  
-  get size() {
-    return this.cache.size;
   }
 }
 
@@ -196,22 +176,6 @@ export class PokemonAPI {
 
   async getPokemon(idOrName, options = {}) {
     return await this.fetchData(`pokemon/${idOrName}`, options);
-  }
-
-  async getSpecies(urlOrId, options = {}) {
-    const endpoint =
-      typeof urlOrId === "string" && urlOrId.startsWith("http")
-        ? urlOrId
-        : `pokemon-species/${urlOrId}`;
-    return this.fetchData(endpoint, options);
-  }
-
-  async getEvolutionChain(urlOrId, options = {}) {
-    const endpoint =
-      typeof urlOrId === "string" && urlOrId.startsWith("http")
-        ? urlOrId
-        : `evolution-chain/${urlOrId}`;
-    return this.fetchData(endpoint, options);
   }
 
   async getPokemonList(limit = 100, offset = 0, options = {}) {
