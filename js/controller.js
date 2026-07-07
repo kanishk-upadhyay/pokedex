@@ -334,12 +334,6 @@ class PokedexController {
     }
   }
   
-  // Helper function to yield control back to the main thread
-  yieldToMain() {
-    return new Promise(resolve => {
-      setTimeout(resolve, 0);
-    });
-  }
 
   async fetchPokemonById(id, options = {}) {
     try {
