@@ -454,19 +454,6 @@ body {
     text-align: center;
 }
 
-.loading-indicator {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: #00ff00;
-    background-color: rgba(0, 0, 0, 0.7);
-    padding: 10px 20px;
-    border-radius: 5px;
-    z-index: 10;
-    font-size: 0.9em;
-}
-
 /* Sprite skeleton: perceived-speed placeholder shown until the sprite paints */
 .sprite-skeleton {
     position: absolute;
@@ -784,11 +771,6 @@ body {
 .offline-indicator::before {
     content: "📡";
     margin-right: 5px;
-}
-
-/* Smooth transition classes for enhanced UX */
-.smooth-transition {
-    transition: all 0.3s ease;
 }
 
 /* Specific smooth transitions for interactive elements */
