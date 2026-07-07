@@ -598,14 +598,19 @@ class UIController {
   }
 
   _getPokedexEntry(pokemon) {
-    let entry = "No Pokédex entry available.";
     if (pokemon.speciesData?.flavor_text_entries) {
       const english = (pokemon.speciesData.flavor_text_entries || []).find(
         (e) => e.language?.name === "en",
       );
-      if (english) entry = english.flavor_text.replace(/\f/g, " ");
+      if (english) return english.flavor_text.replace(/\f/g, " ");
+      return "No Pokédex entry available.";
     }
-    return entry;
+    // Species data has not been fetched yet (progressive render). Show a
+    // loading state rather than the "unavailable" fallback, unless the fetch
+    // actually failed.
+    return pokemon.speciesLoadFailed
+      ? "No Pokédex entry available."
+      : "Loading entry…";
   }
 
   _buildEvolutionChain(pokemon) {
