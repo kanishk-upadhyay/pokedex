@@ -569,85 +569,8 @@ class PokedexController {
       return tokenMatches.slice(0, 100);
     }
     
-    // 4. Fuzzy character matching with Levenshtein distance for typos
-    let fuzzyMatches = [];
-    for (const name of allNames) {
-      if (this._isFuzzyMatch(query, name) || this._hasTypoMatch(query, name)) {
-        fuzzyMatches.push(name);
-        if (fuzzyMatches.length >= 100) break;
-      }
-    }
-    
-    // Sort results by length (shorter matches first) to show more relevant results
-    fuzzyMatches.sort((a, b) => a.length - b.length);
-    
-    return fuzzyMatches.slice(0, 100);
-  }
-  
-  /**
-   * Simple fuzzy matching algorithm
-   * Checks if query characters appear in the target in the same order
-   * @param {string} query - Query string
-   * @param {string} target - Target string to match against
-   * @returns {boolean} - Whether it's a fuzzy match
-   */
-  _isFuzzyMatch(query, target) {
-    if (!query || !target) return false;
-    
-    query = query.toLowerCase();
-    target = target.toLowerCase();
-    
-    let queryIndex = 0;
-    let targetIndex = 0;
-    
-    while (queryIndex < query.length && targetIndex < target.length) {
-      if (query[queryIndex] === target[targetIndex]) {
-        queryIndex++;
-      }
-      targetIndex++;
-    }
-    
-    return queryIndex === query.length;
-  }
-  
-  /**
-   * Check for typo tolerance using Levenshtein distance
-   * @param {string} query - Query string
-   * @param {string} target - Target string to match against
-   * @returns {boolean} - Whether it's a typo-tolerant match
-   */
-  _hasTypoMatch(query, target) {
-    const q = query.toLowerCase();
-    const t = target.toLowerCase();
-    
-    // For short queries, be more restrictive
-    if (q.length <= 2) return false;
-    
-    // Try different substrings of the target to find a close match
-    for (let i = 0; i <= t.length - q.length; i++) {
-      const substr = t.substring(i, i + q.length);
-      if (this._computeLevenshtein(q, substr, 1) <= 1) {
-        return true;
-      }
-    }
-    
-    // Also check if the full query is close to a prefix of the target
-    if (t.length >= q.length) {
-      const prefix = t.substring(0, q.length);
-      if (this._computeLevenshtein(q, prefix, 1) <= 1) {
-        return true;
-      }
-    }
-    
-    // Check the reverse case too (target in query)
-    if (q.length >= t.length) {
-      const prefix = q.substring(0, t.length);
-      if (this._computeLevenshtein(t, prefix, 1) <= 1) {
-        return true;
-      }
-    }
-    
-    return false;
+    // Nothing matched by substring, prefix, or per-token typo tolerance.
+    return [];
   }
   
   /**
