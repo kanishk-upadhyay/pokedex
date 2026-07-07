@@ -50,7 +50,7 @@ class PokedexController {
       searchAbortController: null,
     };
 
-    this.api = new PokemonAPI({ cache: this.state.pokemonCache });
+    this.api = new PokemonAPI();
     this.init();
   }
 
