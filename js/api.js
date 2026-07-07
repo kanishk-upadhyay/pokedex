@@ -160,13 +160,9 @@ export class RequestQueue {
  */
 export class PokemonAPI {
   constructor(options = {}) {
-    const {
-      cache = null,
-      minRequestInterval = MIN_REQUEST_INTERVAL,
-    } = options;
+    const { minRequestInterval = MIN_REQUEST_INTERVAL } = options;
     this.baseUrl = API_BASE_URL;
     this.requestQueue = new RequestQueue(minRequestInterval);
-    this.cache = cache;
   }
 
   async fetchData(endpoint, options = {}) {
