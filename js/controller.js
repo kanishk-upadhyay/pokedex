@@ -260,22 +260,39 @@ class PokedexController {
   async loadPokemonList() {
     const { nameListKey: key, nameListTTL: ttl } = this.config.storage;
 
-    const countData = await this.api.getPokemonList(1);
-    const apiCount = countData.count;
+    // 1. Use the cached list immediately if we have one: instant, and works
+    //    offline (localStorage never hits the network).
     const persisted = StorageHelper.loadFromStorage(key, ttl);
-
-    if (persisted?.length === apiCount) {
+    if (persisted?.length) {
       this.state.pokemonList = persisted;
       this.state.pokemonNameMap = new Map(
         persisted.map((p) => [p.name.toLowerCase(), p.id]),
       );
       this.state.pokemonNames = Array.from(this.state.pokemonNameMap.keys());
-      this.state.totalPokemon = apiCount;
+      this.state.totalPokemon = persisted.length;
+
+      // 2. Best-effort background refresh: only rebuild if the species count
+      //    actually changed. Offline / API down keeps the cached list.
+      this.api
+        .getPokemonList(1)
+        .then((data) => {
+          if (data?.count && data.count !== persisted.length) {
+            return this.progressivelyLoadPokemonList();
+          }
+        })
+        .catch(() => {});
       return;
     }
 
-    // Use progressive loading
-    await this.progressivelyLoadPokemonList();
+    // 3. No cache yet: needs a connection the first time. Guard so an offline
+    //    first load fails softly instead of rejecting.
+    try {
+      await this.progressivelyLoadPokemonList();
+    } catch (err) {
+      if (err?.name !== "AbortError") {
+        console.error("Could not load the Pokédex list:", err);
+      }
+    }
   }
 
   async progressivelyLoadPokemonList() {
