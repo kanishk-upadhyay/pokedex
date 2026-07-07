@@ -357,6 +357,10 @@ class PokedexController {
           .catch((err) => {
             if (err?.name !== "AbortError") {
               console.error("Failed to load Pokemon details:", err);
+              base.speciesLoadFailed = true;
+              if (this.state.currentId === base.id) {
+                this.ui.updatePokemonDetails(base);
+              }
             }
           });
       }
