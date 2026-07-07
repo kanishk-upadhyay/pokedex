@@ -16,7 +16,6 @@ export const PRELOAD_MAX_ADJACENT = 3;
 export const CACHE_EXPIRATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 export const CACHE_MAX_SIZE = 300;
 export const NAME_LIST_KEY = "pokedex_name_list_v1";
-export const NAME_LIST_TS_KEY = "pokedex_name_list_ts_v1";
 export const NAME_LIST_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 /**

@@ -3,10 +3,9 @@
  */
 
 import { UIController } from "./ui.js";
-import { PokemonAPI, Cache, StorageHelper, SEARCH_DEBOUNCE_MS as SEARCH_DEBOUNCE_MS_FROM_API, PRELOAD_MAX_ADJACENT, NAME_LIST_KEY, NAME_LIST_TS_KEY, NAME_LIST_TTL } from "./api.js";
+import { PokemonAPI, Cache, StorageHelper, SEARCH_DEBOUNCE_MS, PRELOAD_MAX_ADJACENT, NAME_LIST_KEY, NAME_LIST_TTL } from "./api.js";
 
-const SEARCH_DEBOUNCE_MS = SEARCH_DEBOUNCE_MS_FROM_API;
-const PRELOAD_MAX = PRELOAD_MAX_ADJACENT;
+const DEFAULT_POKEMON_ID = 1;
 
 /**
  * Main controller class for the Pokédex application
@@ -27,18 +26,9 @@ const PRELOAD_MAX = PRELOAD_MAX_ADJACENT;
  */
 class PokedexController {
   constructor() {
-    this.config = {
-      app: { defaultId: 1, maxPreloadPokemon: PRELOAD_MAX },
-      storage: {
-        nameListKey: NAME_LIST_KEY,
-        nameListTsKey: NAME_LIST_TS_KEY,
-        nameListTTL: NAME_LIST_TTL,
-      },
-    };
-
     this.ui = new UIController();
     this.state = {
-      currentId: this.config.app.defaultId,
+      currentId: DEFAULT_POKEMON_ID,
       pokemonCache: new Cache(),
       pokemonList: [],
       pokemonNameMap: new Map(),
@@ -258,7 +248,8 @@ class PokedexController {
   }
 
   async loadPokemonList() {
-    const { nameListKey: key, nameListTTL: ttl } = this.config.storage;
+    const key = NAME_LIST_KEY;
+    const ttl = NAME_LIST_TTL;
 
     // 1. Use the cached list immediately if we have one: instant, and works
     //    offline (localStorage never hits the network).
@@ -296,7 +287,7 @@ class PokedexController {
   }
 
   async progressivelyLoadPokemonList() {
-    const { nameListKey: key } = this.config.storage;
+    const key = NAME_LIST_KEY;
     const PAGE_SIZE = 200; // Smaller page size for progressive loading
     
 
@@ -738,7 +729,7 @@ class PokedexController {
     // Remove duplicates and get unique IDs to preload
     const preloadIds = [...new Set(preloadIndices.map(i => this.state.pokemonList[i].id))]
       .filter(id => !this.state.pokemonCache.get(id))
-      .slice(0, this.config.app.maxPreloadPokemon); // Limit number to preload
+      .slice(0, PRELOAD_MAX_ADJACENT); // Limit number to preload
 
     if (preloadIds.length > 0) {
       // Preload data and warm the sprite image so navigation shows it instantly.
