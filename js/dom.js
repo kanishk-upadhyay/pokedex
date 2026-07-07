@@ -60,7 +60,7 @@ function _applyAttributes(el, attrs = {}) {
 
 
     // Event listeners: onClick, onclick, onkeydown etc.
-    if (/^on[A-Z0-9_].*/.test(key) || /^on[A-Za-z0-9_].*/.test(key)) {
+    if (/^on[A-Za-z0-9_]/.test(key)) {
       // Accept both camelCase (onClick) and lowercase (onclick)
       const eventName = key.replace(/^on/, "").toLowerCase();
       if (typeof value === "function") {
