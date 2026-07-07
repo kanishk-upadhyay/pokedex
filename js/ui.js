@@ -511,12 +511,7 @@ class UIController {
         el("strong", {}, "Evolutions: "),
       );
 
-      evolutionChain.forEach((node, idx) => {
-        evolutionsEl.appendChild(node);
-        if (idx < evolutionChain.length - 1) {
-          evolutionsEl.appendChild(el("span", {}, " → "));
-        }
-      });
+      evolutionChain.forEach((node) => evolutionsEl.appendChild(node));
 
       container.appendChild(evolutionsEl);
     }
@@ -645,10 +640,15 @@ class UIController {
 
       const out = [node];
 
-      if (chain.evolves_to && chain.evolves_to.length > 0) {
-        // Branched evolutions (e.g. Eevee) have several next stages; render
-        // each one, separated by "/", instead of only the first branch.
-        chain.evolves_to.forEach((branch, i) => {
+      const nexts = chain.evolves_to || [];
+      if (nexts.length === 1) {
+        out.push(el("span", { class: "evolution-arrow", "aria-hidden": "true" }, " → "));
+        out.push(...build(nexts[0], currentName));
+      } else if (nexts.length > 1) {
+        // Branched evolutions (e.g. Eevee): arrow into the group, then each
+        // branch separated by "/".
+        out.push(el("span", { class: "evolution-arrow", "aria-hidden": "true" }, " → "));
+        nexts.forEach((branch, i) => {
           if (i > 0) out.push(el("span", { class: "evolution-separator", "aria-hidden": "true" }, " / "));
           out.push(...build(branch, currentName));
         });
