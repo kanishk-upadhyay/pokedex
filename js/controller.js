@@ -531,46 +531,53 @@ class PokedexController {
    */
   _fuzzySearch(query) {
     const allNames = this.state.pokemonNames;
-    
-    // Normalize query by replacing hyphens with spaces and trimming
-    const normalizedQuery = query.replace(/[-_]/g, ' ').trim();
-    const queryTokens = normalizedQuery.toLowerCase().split(/\s+/).filter(token => token.length > 0);
-    
-    // 1. Exact substring matches (for performance)
-    let exactMatches = allNames.filter(name => name.includes(query));
-    if (exactMatches.length > 0) {
-      return exactMatches.slice(0, 100);
-    }
-    
+    const q = query.toLowerCase();
+
+    // 1. Exact substring matches (fast path)
+    const exactMatches = allNames.filter((name) => name.includes(q));
+    if (exactMatches.length > 0) return exactMatches.slice(0, 100);
+
     // 2. StartsWith matches
-    let startsWithMatches = allNames.filter(name => name.startsWith(query));
-    if (startsWithMatches.length > 0) {
-      return startsWithMatches.slice(0, 100);
-    }
-    
-    // 3. Multi-token matching for special forms (e.g. "mega charizard" matches "charizard-mega")
-    let tokenMatches = [];
-    for (const name of allNames) {
-      const normalizedName = name.replace(/[-_]/g, ' ');
-      const nameTokens = normalizedName.toLowerCase().split(/\s+/);
-      
-      // Check if all query tokens are present in name tokens (in any order)
-      if (queryTokens.every(queryToken => 
-        nameTokens.some(nameToken => 
-          nameToken.startsWith(queryToken) || this._computeLevenshtein(queryToken, nameToken, 1) <= 1
+    const startsWithMatches = allNames.filter((name) => name.startsWith(q));
+    if (startsWithMatches.length > 0) return startsWithMatches.slice(0, 100);
+
+    // 3. Multi-token matching for special forms (e.g. "mega charizard" ->
+    //    "charizard-mega") with per-token Levenshtein <= 1 typo tolerance.
+    const queryTokens = q.replace(/[-_]/g, " ").trim().split(/\s+/).filter(Boolean);
+    if (queryTokens.length === 0) return [];
+
+    const nameTokensList = this._getNameTokens();
+    const tokenMatches = [];
+    for (let i = 0; i < allNames.length; i++) {
+      const nameTokens = nameTokensList[i];
+      if (
+        queryTokens.every((qt) =>
+          nameTokens.some(
+            (nt) => nt.startsWith(qt) || this._computeLevenshtein(qt, nt, 1) <= 1,
+          ),
         )
-      )) {
-        tokenMatches.push(name);
+      ) {
+        tokenMatches.push(allNames[i]);
         if (tokenMatches.length >= 100) break;
       }
     }
-    
-    if (tokenMatches.length > 0) {
-      return tokenMatches.slice(0, 100);
+
+    return tokenMatches.slice(0, 100);
+  }
+
+  /**
+   * Tokenized form of each Pokémon name (hyphens/underscores -> spaces),
+   * aligned by index with state.pokemonNames. Cached and rebuilt only when the
+   * name list changes, so search does not re-tokenize ~1300 names per keystroke.
+   * Names are already stored lowercase, so no lowercasing is needed here.
+   */
+  _getNameTokens() {
+    const allNames = this.state.pokemonNames;
+    if (this._nameTokensFor !== allNames || this._nameTokens?.length !== allNames.length) {
+      this._nameTokens = allNames.map((name) => name.replace(/[-_]/g, " ").split(/\s+/));
+      this._nameTokensFor = allNames;
     }
-    
-    // Nothing matched by substring, prefix, or per-token typo tolerance.
-    return [];
+    return this._nameTokens;
   }
   
   /**
