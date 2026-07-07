@@ -493,12 +493,7 @@ class PokedexController {
   }
 
   async renderSearchSuggestions(query) {
-    const exactMatch = this.state.pokemonNameMap.get(query);
-    if (exactMatch) {
-      await this.fetchPokemonById(exactMatch);
-      return;
-    }
-
+    // _performSearch already handled the exact-match case before calling this.
     // Implement fuzzy search with multiple matching strategies
     const allMatches = this._fuzzySearch(query);
     

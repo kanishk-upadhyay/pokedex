@@ -3,11 +3,9 @@
  *
  * Refactored to use small DOM helpers for safer, less verbose DOM creation.
  *
- * Note: This version ensures the Pokémon name's text color remains controlled by CSS
- * (ivory via `.pokemon-name`) while applying a text-shadow (glow) via JavaScript
- * using the primary type color. The JS explicitly does NOT set or modify the `color`
- * style of the name element.
- * 
+ * Note: the Pokémon name is colored in JS from the primary type (text fill, plus a
+ * secondary-type stroke for dual-type Pokémon); see _renderDetails.
+ *
  * This module is responsible for:
  * - Element initialization and DOM management
  * - Event listener setup and handling
@@ -379,9 +377,6 @@ class UIController {
     this.elements.mainScreen.innerHTML = "";
 
     if (pokemon.sprites?.front_default) {
-      // Clear screen and show loading indicator
-      this.elements.mainScreen.innerHTML = "";
-      
       const imageEl = img(this._spriteUrl(pokemon.sprites.front_default), {
         class: "pokemon-image fullscreen",
         alt: pokemon.name || "",
@@ -627,7 +622,7 @@ class UIController {
       if (isCurrent) {
         elementClass = "current-evolution";
         // Get primary type from the pokemon object
-        const primaryType = (pokemon.types && pokemon.types[0] && pokemon.types[0].type && pokemon.types[0].type.name) || "normal";
+        const primaryType = this._getPrimaryType(pokemon);
         elementStyle = { 
           color: `var(--color-${primaryType}, ivory)`,
           fontWeight: 'bold'
