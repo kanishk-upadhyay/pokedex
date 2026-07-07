@@ -401,7 +401,7 @@ class UIController {
       };
 
       imageEl.onerror = (err) => {
-        console.error("Image failed to load:", pokemon.name, pokemon.sprites.front_default, err);
+        console.error("Image failed to load:", pokemon.name, this._spriteUrl(pokemon.sprites.front_default), err);
         if (this.state.lastDisplayedId === pokemon.id) {
           skeleton.classList.add("failed");
           skeleton.textContent = "Sprite unavailable";
@@ -521,10 +521,6 @@ class UIController {
   }
 
   /**
-   * Handle clicking on a Pokemon sprite to toggle front/back view
-   * @private
-   */
-  /**
    * Rewrite PokeAPI sprite URLs to the jsDelivr CDN mirror of the same repo.
    * raw.githubusercontent.com aggressively rate-limits (HTTP 429), which makes
    * sprites fail intermittently; the CDN mirror is not rate-limited.
@@ -539,6 +535,10 @@ class UIController {
     );
   }
 
+  /**
+   * Handle clicking on a Pokemon sprite to toggle front/back view
+   * @private
+   */
   _handleSpriteClick(pokemon, img) {
     // Clear any existing timeout and message elements to prevent conflicts
     if (this.state.spriteMessageTimeout) {
