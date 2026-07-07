@@ -10,9 +10,5 @@ import { PokedexController } from "./controller.js";
 
 // Initialize the application when DOM is ready
 document.addEventListener("DOMContentLoaded", () => {
-  // Create a new instance of the Pokédex controller
-  const pokedex = new PokedexController();
+  new PokedexController();
 });
-
-// Export components for potential reuse in other parts of the application
-export { PokedexController };
