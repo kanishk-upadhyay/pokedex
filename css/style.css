@@ -509,6 +509,25 @@ body {
     outline: none;
 }
 
+/* Visible keyboard focus ring on every interactive control (Pokédex yellow,
+   readable on both the red shell and the dark screen). */
+.pokemon-search-input:focus-visible,
+.pokemon-search-button:focus-visible,
+.blue-button:focus-visible,
+.camera-lens:focus-visible,
+.yellow-button:focus-visible,
+.d-pad-up:focus-visible,
+.d-pad-down:focus-visible,
+.d-pad-left:focus-visible,
+.d-pad-right:focus-visible,
+.d-pad-center:focus-visible,
+.shortcuts-close:focus-visible,
+.suggestions-list button:focus-visible,
+.suggestions-list [role="option"]:focus-visible {
+    outline: 3px solid #ffcb05;
+    outline-offset: 2px;
+}
+
 .pokemon-search-button {
     background-color: #222;
     border: 1px solid #444;
