@@ -1,0 +1,10 @@
+{
+  "name": "pokedex",
+  "version": "1.0.0",
+  "description": "A vanilla-JS Pokédex web app.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  }
+}
