@@ -116,17 +116,6 @@ class PokedexController {
       }
     }
 
-    // Handle special keys first
-    if (key === "?") {
-      this.ui.showShortcuts();
-      return;
-    }
-    
-    if (key === "Escape") {
-      this.ui.hideShortcuts();
-      return;
-    }
-
     const keyMap = {
       ArrowUp: "up",
       ArrowDown: "down",
@@ -242,7 +231,7 @@ class PokedexController {
 
     this.fetchPokemonById(id).catch((err) => {
       if (err?.name !== "AbortError") {
-        this.ui.showWarningMessage("Failed to load starter Pokémon");
+        this.ui.showNotice("Failed to load starter Pokémon");
         console.error("Failed to fetch starter Pokémon:", err);
       }
     });
