@@ -204,7 +204,7 @@ class PokedexController {
 
     // Restore the last Pokémon the user viewed, if any; otherwise a starter.
     let lastId = NaN;
-    try { lastId = parseInt(localStorage.getItem("pokedex_last_id"), 10); } catch (e) {}
+    lastId = parseInt(StorageHelper.loadRaw("pokedex_last_id"), 10);
 
     if (Number.isInteger(lastId) && lastId > 0) {
       this.fetchPokemonById(lastId).catch((err) => {
@@ -341,7 +341,7 @@ class PokedexController {
       this.state.currentId = base.id;
       this.ui.setSearchValue(base.name);
       await this.ui.displayPokemon(base);
-      try { localStorage.setItem("pokedex_last_id", String(base.id)); } catch (e) {}
+      StorageHelper.saveRaw("pokedex_last_id", base.id);
 
       // ...then fetch species + evolution and patch the details panel in,
       // as long as the user has not navigated away in the meantime.
