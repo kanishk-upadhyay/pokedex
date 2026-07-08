@@ -485,7 +485,7 @@ class UIController {
 
     const entryEl = el(
       "p",
-      { class: `pokemon-entry color-${primaryType}` },
+      { class: "pokemon-entry" },
       this._getPokedexEntry(pokemon),
     );
 
