@@ -99,6 +99,23 @@ export class StorageHelper {
       return null;
     }
   }
+
+  // Simple (non-TTL) helpers for small scalar values.
+  static saveRaw(key, value) {
+    try {
+      localStorage.setItem(key, String(value));
+    } catch (err) {
+      // ignore (private mode / quota)
+    }
+  }
+
+  static loadRaw(key) {
+    try {
+      return localStorage.getItem(key);
+    } catch (err) {
+      return null;
+    }
+  }
 }
 
 /**
