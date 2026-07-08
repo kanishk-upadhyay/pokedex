@@ -453,30 +453,33 @@ class UIController {
       el("span", { class: "pokemon-id" }, ` - ${pokemon.id}`),
     );
 
-    // Apply primary color for text fill and secondary color for text stroke if present
+    // Colour the name with the primary type. For dual-type Pokémon, add a hard
+    // (non-blurred) offset shadow in the secondary type colour: an 8-bit style
+    // double-tone that reads as two types and stays legible.
     if (nameEl && nameEl.style) {
-      // Use primary type color for text fill
-      const fillCssVarName = `--color-${primaryType}`;
-      nameEl.style.webkitTextFillColor = `var(${fillCssVarName}, ivory)`;
-      // Also set regular color as fallback
-      nameEl.style.color = `var(${fillCssVarName}, ivory)`;
-      
-      // Remove text shadow
-      nameEl.style.textShadow = 'none';
-      
-      // If secondary type is present, apply it as text stroke
+      const primaryColor = `var(--color-${primaryType}, ivory)`;
+      nameEl.style.color = primaryColor;
+      nameEl.style.webkitTextFillColor = primaryColor;
+      nameEl.style.webkitTextStroke = "none";
+
       const secondaryType = pokemon?.types?.[1]?.type?.name;
-      if (secondaryType) {
-        const strokeCssVarName = `--color-${secondaryType}`;
-        // Apply text stroke using -webkit-text-stroke for browser compatibility
-        nameEl.style.webkitTextStroke = `1px var(${strokeCssVarName}, #ccc)`;
-        nameEl.style.webkitTextStrokeWidth = '1px';
-        nameEl.style.webkitTextStrokeColor = `var(${strokeCssVarName}, #ccc)`;
-      } else {
-        // For single-type Pokémon, no text stroke for cleaner look
-        nameEl.style.webkitTextStroke = 'none';
-      }
+      nameEl.style.textShadow = secondaryType
+        ? `2px 2px 0 var(--color-${secondaryType}, #333)`
+        : "none";
     }
+
+    // #2: type LEDs — one solid glowing dot per type (two for dual-type),
+    // echoing the device's status lights. Decorative; the chips carry the text.
+    const typeLeds = el("span", { class: "type-leds", "aria-hidden": "true" });
+    (pokemon.types || []).forEach((t) => {
+      typeLeds.appendChild(
+        el("span", {
+          class: "type-led",
+          style: { color: `var(--color-${t.type.name}, #ccc)` },
+        }),
+      );
+    });
+    if (typeLeds.childNodes.length) nameEl.appendChild(typeLeds);
 
     const typeChips = (pokemon.types || []).map((t) =>
       el("span", { class: `type-chip ${t.type.name}` }, t.type.name),
