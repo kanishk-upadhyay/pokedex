@@ -506,18 +506,7 @@ class PokedexController {
     if (allMatches.length > 0) {
       // Use virtual scrolling to render only visible items
       this.ui.renderPaginatedSuggestions(allMatches, 10, (selectedItem) => {
-        // When a suggestion is clicked, load that Pokémon
-        const selectedId = this.state.pokemonNameMap.get(selectedItem.name);
-        if (selectedId) {
-          this.fetchPokemonById(selectedId).catch((err) => {
-            if (err?.name !== "AbortError") {
-              this.ui.showError(`Error loading Pokemon: ${selectedItem.name}`);
-              console.error("Error loading selected Pokémon:", err);
-            }
-          });
-          // Update search bar with the selected Pokémon's name
-          this.ui.setSearchValue(selectedItem.name);
-        }
+        this.selectPokemonByName(selectedItem.name);
       }); // Show 10 at a time with selection callback
       this.ui.clearMainScreen();
     } else {
