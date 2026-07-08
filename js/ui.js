@@ -21,6 +21,7 @@
  */
 
 import { el, img } from "./dom.js";
+import { spriteUrl } from "./api.js";
 
 class UIController {
   constructor() {
@@ -407,7 +408,7 @@ class UIController {
     this.elements.mainScreen.innerHTML = "";
 
     if (pokemon.sprites?.front_default) {
-      const imageEl = img(this._spriteUrl(pokemon.sprites.front_default), {
+      const imageEl = img(spriteUrl(pokemon.sprites.front_default), {
         class: "pokemon-image fullscreen",
         alt: pokemon.name || "",
         loading: "eager",
@@ -424,7 +425,7 @@ class UIController {
       };
 
       imageEl.onerror = (err) => {
-        console.error("Image failed to load:", pokemon.name, this._spriteUrl(pokemon.sprites.front_default), err);
+        console.error("Image failed to load:", pokemon.name, spriteUrl(pokemon.sprites.front_default), err);
         if (this.state.lastDisplayedId === pokemon.id) {
           skeleton.classList.add("failed");
           skeleton.textContent = "Sprite unavailable";
@@ -535,21 +536,6 @@ class UIController {
   }
 
   /**
-   * Rewrite PokeAPI sprite URLs to the jsDelivr CDN mirror of the same repo.
-   * raw.githubusercontent.com aggressively rate-limits (HTTP 429), which makes
-   * sprites fail intermittently; the CDN mirror is not rate-limited.
-   * @param {string} url - Original sprite URL
-   * @returns {string} - CDN URL, or the input unchanged if it is not a raw URL
-   */
-  _spriteUrl(url) {
-    if (typeof url !== "string") return url;
-    return url.replace(
-      "https://raw.githubusercontent.com/PokeAPI/sprites/master/",
-      "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/",
-    );
-  }
-
-  /**
    * Handle clicking on a Pokemon sprite to toggle front/back view
    * @private
    */
@@ -568,7 +554,7 @@ class UIController {
     
     if (this.state.showingFront) {
       if (pokemon.sprites.back_default) {
-        img.src = this._spriteUrl(pokemon.sprites.back_default);
+        img.src = spriteUrl(pokemon.sprites.back_default);
         this.state.showingFront = false;
       } else {
         // Show message that back image is not available
@@ -585,7 +571,7 @@ class UIController {
         }, 1500);
       }
     } else {
-      img.src = this._spriteUrl(pokemon.sprites.front_default);
+      img.src = spriteUrl(pokemon.sprites.front_default);
       this.state.showingFront = true;
     }
   }
