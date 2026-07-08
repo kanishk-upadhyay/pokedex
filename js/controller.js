@@ -59,6 +59,7 @@ class PokedexController {
         onSearch: () => this.scheduleSearch(),
         onKeyboardNavigation: (key) => this.handleKeyNavigation(key),
         onShowShortcuts: () => this.ui.showShortcuts(),
+        onSelectPokemon: (name) => this.selectPokemonByName(name),
       });
 
       // Register service worker (best-effort)
@@ -440,6 +441,17 @@ class PokedexController {
       );
     }
     return data;
+  }
+
+  selectPokemonByName(name) {
+    const id = this.state.pokemonNameMap.get(String(name).toLowerCase());
+    if (!id) return;
+    this.ui.setSearchValue(name);
+    this.fetchPokemonById(id).catch((err) => {
+      if (err?.name !== "AbortError") {
+        this.ui.showError(`Error loading ${name}.`);
+      }
+    });
   }
 
   scheduleSearch() {
