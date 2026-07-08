@@ -395,19 +395,24 @@ class PokedexController {
   async getPokemonBase(idOrName, options = {}) {
     const isNumber =
       typeof idOrName === "number" || /^\d+$/.test(String(idOrName));
-    const key = isNumber ? Number(idOrName) : `name_${idOrName.toLowerCase()}`;
+    // Resolve a name to its id via the name map so the cache is keyed only by
+    // id (one entry per Pokémon instead of two, restoring full capacity).
+    const id = isNumber
+      ? Number(idOrName)
+      : this.state.pokemonNameMap.get(String(idOrName).toLowerCase());
 
-    const cached = this.state.pokemonCache.get(key);
-    if (cached) {
-      if (!isNumber) this.state.currentId = cached.id;
-      return cached;
+    if (id) {
+      const cached = this.state.pokemonCache.get(id);
+      if (cached) {
+        if (!isNumber) this.state.currentId = cached.id;
+        return cached;
+      }
     }
 
     try {
       const data = await this.api.getPokemon(idOrName, options);
       const nameLower = data.name.toLowerCase();
       this.state.pokemonCache.set(data.id, data);
-      this.state.pokemonCache.set(`name_${nameLower}`, data);
       if (!this.state.pokemonNameMap.has(nameLower)) {
         this.state.pokemonNames.push(nameLower);
       }
