@@ -464,22 +464,9 @@ class UIController {
 
       const secondaryType = pokemon?.types?.[1]?.type?.name;
       nameEl.style.textShadow = secondaryType
-        ? `2px 2px 0 var(--color-${secondaryType}, #333)`
+        ? `1px 1px 0 var(--color-${secondaryType}, #333)`
         : "none";
     }
-
-    // #2: type LEDs — one solid glowing dot per type (two for dual-type),
-    // echoing the device's status lights. Decorative; the chips carry the text.
-    const typeLeds = el("span", { class: "type-leds", "aria-hidden": "true" });
-    (pokemon.types || []).forEach((t) => {
-      typeLeds.appendChild(
-        el("span", {
-          class: "type-led",
-          style: { color: `var(--color-${t.type.name}, #ccc)` },
-        }),
-      );
-    });
-    if (typeLeds.childNodes.length) nameEl.appendChild(typeLeds);
 
     const typeChips = (pokemon.types || []).map((t) =>
       el("span", { class: `type-chip ${t.type.name}` }, t.type.name),

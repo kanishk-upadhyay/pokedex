@@ -194,24 +194,6 @@ body {
     color: ivory;
 }
 
-/* Type LEDs: solid glowing dots (one per type) next to the name, styled like
-   the device's status lights. Colour is set inline per type; the dot and glow
-   both use currentColor. */
-.type-leds {
-    display: inline-flex;
-    gap: 5px;
-    margin-left: 8px;
-    vertical-align: middle;
-}
-.type-led {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background-color: currentColor;
-    box-shadow: 0 0 5px currentColor, inset 0 0 2px rgba(255, 255, 255, 0.5);
-    border: 1px solid rgba(0, 0, 0, 0.4);
-}
-
 .pokemon-id {
     margin: auto;
 }
