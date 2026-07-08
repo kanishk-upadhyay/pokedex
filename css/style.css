@@ -242,10 +242,10 @@ body {
     color: inherit;
     text-transform: capitalize;
     cursor: pointer;
-    text-decoration: underline;
-    text-underline-offset: 2px;
 }
 .evolution-node:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
     filter: brightness(1.35);
 }
 
@@ -502,6 +502,7 @@ body {
 .d-pad-right:focus-visible,
 .d-pad-center:focus-visible,
 .shortcuts-close:focus-visible,
+.evolution-node:focus-visible,
 .suggestions-list button:focus-visible,
 .suggestions-list [role="option"]:focus-visible {
     outline: 3px solid #ffcb05;
