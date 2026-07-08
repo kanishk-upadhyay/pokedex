@@ -76,7 +76,11 @@ class UIController {
 
       const detailsArea = el(
         "div",
-        { class: "pokemon-details-area" },
+        {
+          class: "pokemon-details-area",
+          role: "status",
+          "aria-live": "polite",
+        },
         "Loading Pokédex...",
       );
 
@@ -279,6 +283,7 @@ class UIController {
     this.state.lastDisplayedId = null;
 
     if (this.elements.detailsArea) {
+      this.elements.detailsArea.classList.remove("details-error");
       this.elements.detailsArea.textContent = message;
     }
 
@@ -294,9 +299,11 @@ class UIController {
 
   showError(message, logToConsole = true) {
     this.state.lastDisplayedId = null;
-    if (this.elements.detailsArea) this.elements.detailsArea.textContent = message;
-    
-    // Always log to console for debugging
+    if (this.elements.detailsArea) {
+      this.elements.detailsArea.textContent = message;
+      this.elements.detailsArea.classList.add("details-error");
+    }
+
     if (logToConsole) {
       console.error(message);
     }
@@ -518,6 +525,7 @@ class UIController {
       container.appendChild(evolutionsEl);
     }
 
+    this.elements.detailsArea.classList.remove("details-error");
     this.elements.detailsArea.innerHTML = "";
     this.elements.detailsArea.appendChild(container);
   }

@@ -203,6 +203,11 @@ body {
     margin: 0.5em auto;
 }
 
+.pokemon-details-area.details-error {
+    color: #ff6b6b;
+    font-weight: 600;
+}
+
 .pokemon-types,
 .pokemon-abilities,
 .pokemon-moves,
