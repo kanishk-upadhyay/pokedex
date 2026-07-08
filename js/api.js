@@ -154,6 +154,21 @@ export class RequestQueue {
  * The class is designed to be instantiated with optional configuration
  * for caching and rate limiting parameters.
  */
+/**
+ * Rewrite PokeAPI sprite URLs to the jsDelivr CDN mirror of the same repo.
+ * raw.githubusercontent.com aggressively rate-limits (HTTP 429), which makes
+ * sprites fail intermittently; the CDN mirror is not rate-limited.
+ * @param {string} url - Original sprite URL
+ * @returns {string} - CDN URL, or the input unchanged if it is not a raw URL
+ */
+export function spriteUrl(url) {
+  if (typeof url !== "string") return url;
+  return url.replace(
+    "https://raw.githubusercontent.com/PokeAPI/sprites/master/",
+    "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/",
+  );
+}
+
 export class PokemonAPI {
   constructor(options = {}) {
     const { minRequestInterval = MIN_REQUEST_INTERVAL } = options;
