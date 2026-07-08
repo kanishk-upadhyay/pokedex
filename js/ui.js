@@ -471,7 +471,7 @@ class UIController {
     // (non-blurred) offset shadow in the secondary type colour: an 8-bit style
     // double-tone that reads as two types and stays legible.
     if (nameEl && nameEl.style) {
-      const primaryColor = `var(--color-${primaryType}, ivory)`;
+      const primaryColor = this._typeColor(primaryType);
       nameEl.style.color = primaryColor;
       nameEl.style.webkitTextFillColor = primaryColor;
       nameEl.style.webkitTextStroke = "none";
@@ -600,6 +600,11 @@ class UIController {
     );
   }
 
+  // CSS custom-property colour for a type, with an ivory fallback.
+  _typeColor(type) {
+    return `var(--color-${type}, ivory)`;
+  }
+
   _getMovesString(pokemon) {
     return (pokemon.moves || [])
       .slice(0, 4)
@@ -643,7 +648,7 @@ class UIController {
         // Get primary type from the pokemon object
         const primaryType = this._getPrimaryType(pokemon);
         elementStyle = { 
-          color: `var(--color-${primaryType}, ivory)`,
+          color: this._typeColor(primaryType),
           fontWeight: 'bold'
         };
       }
