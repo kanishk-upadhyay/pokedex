@@ -689,7 +689,6 @@ class UIController {
    */
   showShortcuts() {
     if (this.elements.shortcutsOverlay) {
-      this.elements.shortcutsOverlay.style.display = 'flex';
       this.elements.shortcutsOverlay.classList.add('active');
       this.elements.shortcutsOverlay.setAttribute('aria-hidden', 'false');
       this.elements.shortcutsOverlay.focus();
@@ -701,7 +700,6 @@ class UIController {
    */
   hideShortcuts() {
     if (this.elements.shortcutsOverlay) {
-      this.elements.shortcutsOverlay.style.display = 'none';
       this.elements.shortcutsOverlay.classList.remove('active');
       this.elements.shortcutsOverlay.setAttribute('aria-hidden', 'true');
     }
@@ -718,10 +716,6 @@ class UIController {
   renderPaginatedSuggestions(allItems = [], pageSize = 10, onSelect) {
     if (!this.elements.detailsArea || !Array.isArray(allItems) || allItems.length === 0) return null;
     
-    const activeOnSelect = onSelect || (() => {
-      // No-op default when no onSelect handler is provided
-    });
-
     // Clear existing content
     this._clearMessageState();
     this.elements.detailsArea.innerHTML = "";
@@ -747,7 +741,7 @@ class UIController {
     const rendered = initialItems
       .map(this._normalizeItem.bind(this))
       .filter(Boolean)
-      .map((item) => this._createSuggestionItem(item, activeOnSelect));
+      .map((item) => this._createSuggestionItem(item, onSelect));
 
     if (rendered.length) {
       const frag = document.createDocumentFragment();
@@ -764,7 +758,7 @@ class UIController {
         dataset: { page: "0" },
         onClick: (ev) => {
           ev.preventDefault();
-          this._handleLoadMore(allItems, pageSize, listEl, loadMoreBtn, state, activeOnSelect);
+          this._handleLoadMore(allItems, pageSize, listEl, loadMoreBtn, state, onSelect);
         }
       }, `Load more (${allItems.length - pageSize} remaining)`);
       
@@ -776,11 +770,6 @@ class UIController {
     
     this.elements.detailsArea.appendChild(container);
     return container;
-  }
-  
-  showWarningMessage(message) {
-    this._setDetailsMessage(message, "notice");
-    console.warn(message);
   }
   
   _handleLoadMore(allItems, pageSize, listEl, loadMoreBtn, state, onSelect) {
@@ -824,32 +813,25 @@ class UIController {
 
   _normalizeItem(item) {
     if (item == null) return null;
-    if (typeof item === "string") return { id: undefined, name: item };
-    if (typeof item === "object") {
-      return { id: item.id, name: String(item.name ?? item.label ?? "") };
-    }
-    return { id: undefined, name: String(item) };
+    if (typeof item === "object") return { name: String(item.name ?? item.label ?? "") };
+    return { name: String(item) };
   }
 
   _createSuggestionItem(item, onSelect) {
     const label = item.name || "";
-    const dataset = {};
-    if (item.id !== undefined && item.id !== null) dataset.id = String(item.id);
-
     const btn = el(
       "button",
       {
         type: "button",
         class: "suggestion-button",
-        dataset,
         onClick: (ev) => {
           ev.preventDefault();
-          onSelect?.({ id: item.id, name: label });
+          onSelect?.({ name: label });
         },
         onKeydown: (ev) => {
           if (ev.key === "Enter" || ev.key === " ") {
             ev.preventDefault();
-            onSelect?.({ id: item.id, name: label });
+            onSelect?.({ name: label });
           }
         },
         "aria-label": label,

@@ -19,7 +19,6 @@ function isNode(o) {
  *  - `class` / `className` / `cls` (string or array)
  *  - `style` (string or object)
  *  - `dataset` (object)
- *  - `props` (object) -> sets DOM properties
  *  - Event listeners: attributes starting with "on" (e.g., onClick or onclick)
  *  - Any other key -> element.setAttribute(key, value)
  */
@@ -65,11 +64,6 @@ function _applyAttributes(el, attrs = {}) {
       const eventName = key.replace(/^on/, "").toLowerCase();
       if (typeof value === "function") {
         el.addEventListener(eventName, value);
-      } else if (Array.isArray(value)) {
-        value.forEach(
-          (fn) =>
-            typeof fn === "function" && el.addEventListener(eventName, fn),
-        );
       }
       return;
     }
