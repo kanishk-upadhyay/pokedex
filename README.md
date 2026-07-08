@@ -51,6 +51,7 @@ The application follows a modular architecture with clear separation of concerns
 *   **`controller.js`:** Main application orchestrator, manages state and coordinates between modules
 *   **`ui.js`:** Handles all DOM manipulation, rendering, and user interactions
 *   **`api.js`:** Manages API communication, caching, and rate limiting
+*   **`search.js`:** Pure, unit-tested fuzzy-search algorithm (tokenization + Levenshtein)
 *   **`dom.js`:** Safe and efficient DOM creation utilities
 *   **`sw.js`:** Service worker for offline capabilities and caching
 
@@ -87,6 +88,21 @@ All you need is a modern web browser that supports ES6 modules and Service Worke
         This will automatically open the page in your browser.
 
     You can also open the `index.html` file directly in your browser, but some features may be limited by browser security policies for local files.
+
+---
+
+## Testing
+
+The fuzzy-search algorithm (tokenization, multi-token matching, and a
+threshold-bounded Levenshtein distance) is isolated in `js/search.js` as pure
+functions and covered by unit tests using Node's built-in test runner (no
+dependencies):
+
+```bash
+node --test
+# or
+npm test
+```
 
 ---
 

@@ -4,6 +4,7 @@
 
 import { UIController } from "./ui.js";
 import { PokemonAPI, Cache, StorageHelper, spriteUrl, SEARCH_DEBOUNCE_MS, PRELOAD_MAX_ADJACENT, NAME_LIST_KEY, NAME_LIST_TTL } from "./api.js";
+import { fuzzySearch, tokenizeNames } from "./search.js";
 
 const DEFAULT_POKEMON_ID = 1;
 
@@ -515,115 +516,21 @@ class PokedexController {
     }
   }
   
-  /**
-   * Performs advanced fuzzy search with multiple matching strategies including:
-   * - Exact substring matching
-   * - StartsWith matching  
-   * - Multi-token matching for special forms (e.g. "mega charizard" matches "charizard-mega")
-   * - Fuzzy character matching with Levenshtein distance for typo tolerance
-   * @param {string} query - The search query
-   * @returns {Array<string>} - Array of matching Pokémon names
-   */
+  // Fuzzy-search the name list. The algorithm lives in search.js; this binds it
+  // to app state and the memoized token index.
   _fuzzySearch(query) {
-    const allNames = this.state.pokemonNames;
-    const q = query.toLowerCase();
-
-    // 1. Exact substring matches (fast path)
-    const exactMatches = allNames.filter((name) => name.includes(q));
-    if (exactMatches.length > 0) return exactMatches.slice(0, 100);
-
-    // 2. StartsWith matches
-    const startsWithMatches = allNames.filter((name) => name.startsWith(q));
-    if (startsWithMatches.length > 0) return startsWithMatches.slice(0, 100);
-
-    // 3. Multi-token matching for special forms (e.g. "mega charizard" ->
-    //    "charizard-mega") with per-token Levenshtein <= 1 typo tolerance.
-    const queryTokens = q.replace(/[-_]/g, " ").trim().split(/\s+/).filter(Boolean);
-    if (queryTokens.length === 0) return [];
-
-    const nameTokensList = this._getNameTokens();
-    const tokenMatches = [];
-    for (let i = 0; i < allNames.length; i++) {
-      const nameTokens = nameTokensList[i];
-      if (
-        queryTokens.every((qt) =>
-          nameTokens.some(
-            (nt) => nt.startsWith(qt) || this._computeLevenshtein(qt, nt, 1) <= 1,
-          ),
-        )
-      ) {
-        tokenMatches.push(allNames[i]);
-        if (tokenMatches.length >= 100) break;
-      }
-    }
-
-    return tokenMatches.slice(0, 100);
+    return fuzzySearch(this.state.pokemonNames, query, this._getNameTokens());
   }
 
-  /**
-   * Tokenized form of each Pokémon name (hyphens/underscores -> spaces),
-   * aligned by index with state.pokemonNames. Cached and rebuilt only when the
-   * name list changes, so search does not re-tokenize ~1300 names per keystroke.
-   * Names are already stored lowercase, so no lowercasing is needed here.
-   */
+  // Tokenized names aligned with state.pokemonNames, rebuilt only when the list
+  // changes so search does not re-tokenize ~1300 names on every keystroke.
   _getNameTokens() {
     const allNames = this.state.pokemonNames;
     if (this._nameTokensFor !== allNames || this._nameTokens?.length !== allNames.length) {
-      this._nameTokens = allNames.map((name) => name.replace(/[-_]/g, " ").split(/\s+/));
+      this._nameTokens = tokenizeNames(allNames);
       this._nameTokensFor = allNames;
     }
     return this._nameTokens;
-  }
-  
-  /**
-   * Compute Levenshtein distance between two strings.
-   *
-   * Uses two rolling rows instead of a full matrix (O(min(m, n)) space) and,
-   * when a threshold is given, bails out early once every value in the current
-   * row exceeds it. Callers that only care whether the distance is within a
-   * small bound (e.g. <= 1) should pass that bound as the threshold.
-   * @param {string} s1 - First string
-   * @param {string} s2 - Second string
-   * @param {number} [threshold=Infinity] - Stop early once the distance is known
-   *   to exceed this; returns threshold + 1 in that case.
-   * @returns {number} - The edit distance (or threshold + 1 if it exceeds threshold)
-   */
-  _computeLevenshtein(s1, s2, threshold = Infinity) {
-    const m = s1.length;
-    const n = s2.length;
-
-    if (m === 0) return n;
-    if (n === 0) return m;
-
-    // Keep s1 the shorter string so a row stays as small as possible
-    if (m > n) return this._computeLevenshtein(s2, s1, threshold);
-
-    let prevRow = new Array(n + 1);
-    let currRow = new Array(n + 1);
-    for (let j = 0; j <= n; j++) prevRow[j] = j;
-
-    for (let i = 1; i <= m; i++) {
-      currRow[0] = i;
-      let minInRow = i;
-
-      for (let j = 1; j <= n; j++) {
-        const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
-        currRow[j] = Math.min(
-          prevRow[j] + 1,        // deletion
-          currRow[j - 1] + 1,    // insertion
-          prevRow[j - 1] + cost  // substitution
-        );
-        if (currRow[j] < minInRow) minInRow = currRow[j];
-      }
-
-      // The row minimum never decreases as i grows, so once it passes the
-      // threshold the final distance cannot come back under it.
-      if (minInRow > threshold) return threshold + 1;
-
-      [prevRow, currRow] = [currRow, prevRow];
-    }
-
-    return prevRow[n];
   }
 
   preloadAdjacentPokemon(currentId) {
