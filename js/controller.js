@@ -3,7 +3,7 @@
  */
 
 import { UIController } from "./ui.js";
-import { PokemonAPI, Cache, StorageHelper, SEARCH_DEBOUNCE_MS, PRELOAD_MAX_ADJACENT, NAME_LIST_KEY, NAME_LIST_TTL } from "./api.js";
+import { PokemonAPI, Cache, StorageHelper, spriteUrl, SEARCH_DEBOUNCE_MS, PRELOAD_MAX_ADJACENT, NAME_LIST_KEY, NAME_LIST_TTL } from "./api.js";
 
 const DEFAULT_POKEMON_ID = 1;
 
@@ -666,7 +666,7 @@ class PokedexController {
               const front = data?.sprites?.front_default;
               if (front) {
                 const warm = new Image();
-                warm.src = this.ui._spriteUrl(front);
+                warm.src = spriteUrl(front);
               }
             })
             .catch(() => {})
