@@ -484,7 +484,7 @@ class PokedexController {
       if (id >= 1 && id <= this.state.totalPokemon) {
         await this.fetchPokemonById(id, options);
       } else {
-        this.ui.showError(`Pokémon #${id} out of range.`);
+        this.ui.showNotice(`Pokémon #${id} out of range.`);
         this.ui.clearMainScreen();
       }
       return;
@@ -532,7 +532,7 @@ class PokedexController {
       }); // Show 10 at a time with selection callback
       this.ui.clearMainScreen();
     } else {
-      this.ui.showError("Pokémon not found. Check spelling.");
+      this.ui.showNotice("Pokémon not found. Check spelling.");
       this.ui.clearMainScreen();
     }
   }

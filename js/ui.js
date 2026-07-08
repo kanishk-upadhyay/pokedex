@@ -280,38 +280,53 @@ class UIController {
     }
   }
 
-  showUIState(message, type = "message") {
+  // Remove any message-kind class so the details area is neutral again.
+  _clearMessageState() {
+    this.elements.detailsArea?.classList.remove(
+      "details-error",
+      "details-notice",
+      "details-info",
+      "details-loading",
+    );
+  }
+
+  // Show a status message with a semantic kind. Colour + icon come from CSS;
+  // the text stays plain (textContent) so it is XSS-safe and readable by AT.
+  //   error   -> system failure (red)
+  //   notice  -> user-input issue, e.g. not found / out of range (amber)
+  //   info    -> prompt / neutral guidance (cyan)
+  //   loading -> in progress (green)
+  _setDetailsMessage(message, kind) {
     this.state.lastDisplayedId = null;
+    const area = this.elements.detailsArea;
+    if (!area) return;
+    this._clearMessageState();
+    if (kind) area.classList.add(`details-${kind}`);
+    area.textContent = message;
+  }
 
-    if (this.elements.detailsArea) {
-      this.elements.detailsArea.classList.remove("details-error");
-      this.elements.detailsArea.textContent = message;
-    }
-
-    if (type === "loading" && this.elements.mainScreen) {
+  showLoading(message = "Loading...") {
+    this._setDetailsMessage(message, "loading");
+    if (this.elements.mainScreen) {
       this.elements.mainScreen.innerHTML =
         '<div class="loading">Loading...</div>';
     }
   }
 
-  showLoading(message = "Loading...") {
-    this.showUIState(message, "loading");
-  }
-
   showError(message, logToConsole = true) {
-    this.state.lastDisplayedId = null;
-    if (this.elements.detailsArea) {
-      this.elements.detailsArea.textContent = message;
-      this.elements.detailsArea.classList.add("details-error");
-    }
-
+    this._setDetailsMessage(message, "error");
     if (logToConsole) {
       console.error(message);
     }
   }
 
+  // User-input issues (typo, out-of-range) — a gentle amber notice, not an error.
+  showNotice(message) {
+    this._setDetailsMessage(message, "notice");
+  }
+
   showMessage(message) {
-    this.showUIState(message, "message");
+    this._setDetailsMessage(message, "info");
   }
 
   clearMainScreen() {
@@ -516,7 +531,7 @@ class UIController {
       container.appendChild(evolutionsEl);
     }
 
-    this.elements.detailsArea.classList.remove("details-error");
+    this._clearMessageState();
     this.elements.detailsArea.innerHTML = "";
     this.elements.detailsArea.appendChild(container);
   }
@@ -710,6 +725,7 @@ class UIController {
     });
 
     // Clear existing content
+    this._clearMessageState();
     this.elements.detailsArea.innerHTML = "";
     
     // Create container for suggestions
@@ -765,9 +781,7 @@ class UIController {
   }
   
   showWarningMessage(message) {
-    // Warning messages are shown but not logged to console as errors
-    this.state.lastDisplayedId = null;
-    if (this.elements.detailsArea) this.elements.detailsArea.textContent = message;
+    this._setDetailsMessage(message, "notice");
     console.warn(message);
   }
   
