@@ -142,26 +142,36 @@ class UIController {
    * Set up all UI event listeners
    * @param {Object} handlers - Event handler callbacks from controller
    */
+  /**
+   * Wire an element so it activates on click AND on Enter/Space, so the custom
+   * role="button" divs (D-pad, camera lens, yellow button) are keyboard-operable.
+   */
+  _onActivate(element, handler) {
+    if (!element) return;
+    element.addEventListener("click", handler);
+    element.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+        e.preventDefault();
+        e.stopPropagation();
+        handler(e);
+      }
+    });
+  }
+
   initEventListeners(handlers) {
     const { onTogglePokedex, onNavigate, onSearch, onKeyboardNavigation, onShowShortcuts } =
       handlers;
 
-    if (this.elements.yellowButton) {
-      this.elements.yellowButton.addEventListener("click", onTogglePokedex);
-    }
-    if (this.elements.cameraLens) {
-      this.elements.cameraLens.addEventListener("click", onTogglePokedex);
-    }
+    this._onActivate(this.elements.yellowButton, onTogglePokedex);
+    this._onActivate(this.elements.cameraLens, onTogglePokedex);
 
     Object.entries(this.elements.dPad).forEach(([direction, element]) => {
       if (element && direction !== "center") {
-        element.addEventListener("click", () => onNavigate(direction));
+        this._onActivate(element, () => onNavigate(direction));
       }
     });
 
-    if (this.elements.dPad.center) {
-      this.elements.dPad.center.addEventListener("click", onSearch);
-    }
+    this._onActivate(this.elements.dPad.center, onSearch);
 
     document.addEventListener("keydown", (ev) => {
       // Handle shortcuts overlay
@@ -185,9 +195,6 @@ class UIController {
 
     if (this.elements.searchButton) {
       this.elements.searchButton.addEventListener("click", onSearch);
-      this.elements.searchButton.addEventListener("touchstart", onSearch, {
-        passive: true,
-      });
     }
 
     if (this.elements.searchInput) {
