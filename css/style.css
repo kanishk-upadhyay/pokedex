@@ -463,6 +463,9 @@ body {
     height: auto;
     cursor: pointer;
     object-fit: contain;
+    /* Crisp nearest-neighbour upscaling for the pixel-art sprites */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: pixelated;
 }
 
 .pokemon-image.fullscreen {
