@@ -203,10 +203,25 @@ body {
     margin: 0.5em auto;
 }
 
-.pokemon-details-area.details-error {
-    color: #ff6b6b;
+/* Semantic status messages: colour + left accent bar + monochrome icon.
+   Colour is never the only signal (icon + role/aria-live also convey meaning). */
+.pokemon-details-area.details-error,
+.pokemon-details-area.details-notice,
+.pokemon-details-area.details-info,
+.pokemon-details-area.details-loading {
     font-weight: 600;
+    padding-left: 10px;
+    border-left: 3px solid currentColor;
 }
+.pokemon-details-area.details-error   { color: #ff5a5a; }  /* system failure */
+.pokemon-details-area.details-notice  { color: #ffcb05; }  /* user-input issue */
+.pokemon-details-area.details-info    { color: #8fd3ff; }  /* prompt / guidance */
+.pokemon-details-area.details-loading { color: #4dff4d; }  /* in progress */
+
+.pokemon-details-area.details-error::before   { content: "\2715  "; }        /* X  */
+.pokemon-details-area.details-notice::before  { content: "\26A0\FE0E  "; }   /* !  */
+.pokemon-details-area.details-info::before    { content: "\2139\FE0E  "; }   /* i  */
+.pokemon-details-area.details-loading::before { content: "\27F3  "; }        /* loop */
 
 .pokemon-types,
 .pokemon-abilities,
