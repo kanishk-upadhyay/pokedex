@@ -249,66 +249,6 @@ body {
     filter: brightness(1.35);
 }
 
-/* Add Pokemon color classes for text */
-/* Type color classes using CSS variables */
-[class^="color-"] {
-    text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
-}
-
-.color-normal {
-    color: var(--color-normal);
-}
-.color-fire {
-    color: var(--color-fire);
-}
-.color-water {
-    color: var(--color-water);
-}
-.color-electric {
-    color: var(--color-electric);
-}
-.color-grass {
-    color: var(--color-grass);
-}
-.color-ice {
-    color: var(--color-ice);
-}
-.color-fighting {
-    color: var(--color-fighting);
-}
-.color-poison {
-    color: var(--color-poison);
-}
-.color-ground {
-    color: var(--color-ground);
-}
-.color-flying {
-    color: var(--color-flying);
-}
-.color-psychic {
-    color: var(--color-psychic);
-}
-.color-bug {
-    color: var(--color-bug);
-}
-.color-rock {
-    color: var(--color-rock);
-}
-.color-ghost {
-    color: var(--color-ghost);
-}
-.color-dragon {
-    color: var(--color-dragon);
-}
-.color-dark {
-    color: var(--color-dark);
-}
-.color-steel {
-    color: var(--color-steel);
-}
-.color-fairy {
-    color: var(--color-fairy);
-}
 
 /* Type chips styling */
 .type-chip {

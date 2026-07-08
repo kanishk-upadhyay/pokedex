@@ -414,10 +414,8 @@ class UIController {
         decoding: "async",
       });
 
-      // Shimmer skeleton, tinted by the primary type, shown until the sprite paints
-      const skeleton = el("div", {
-        class: `sprite-skeleton color-${this._getPrimaryType(pokemon)}`,
-      });
+      // Shimmer skeleton shown until the sprite paints
+      const skeleton = el("div", { class: "sprite-skeleton" });
       this.elements.mainScreen.appendChild(skeleton);
       this.elements.mainScreen.appendChild(imageEl);
 
