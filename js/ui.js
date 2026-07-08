@@ -465,7 +465,7 @@ class UIController {
 
       const secondaryType = pokemon?.types?.[1]?.type?.name;
       nameEl.style.textShadow = secondaryType
-        ? `1px 1px 0 var(--color-${secondaryType}, #333)`
+        ? `1px 1px 0 var(--color-${secondaryType}, #333), 3px 3px 3px rgba(0, 0, 0, 0.6)`
         : "none";
     }
 
