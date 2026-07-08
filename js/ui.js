@@ -195,7 +195,28 @@ class UIController {
           return;
         }
       }
-      
+
+      // Space: open the Pokédex when closed, flip the sprite when open. Skip when
+      // a button or input already owns Space (there it activates that element or
+      // types a space).
+      if (ev.key === ' ' || ev.key === 'Spacebar') {
+        const a = document.activeElement;
+        const owned =
+          a &&
+          (a.tagName === 'BUTTON' ||
+            a.tagName === 'INPUT' ||
+            a.getAttribute?.('role') === 'button');
+        if (!owned) {
+          ev.preventDefault();
+          if (this.isPokedexOpen()) {
+            this.toggleSprite();
+          } else {
+            onTogglePokedex();
+          }
+          return;
+        }
+      }
+
       onKeyboardNavigation(ev.key);
     });
 
@@ -533,6 +554,13 @@ class UIController {
     this._clearMessageState();
     this.elements.detailsArea.innerHTML = "";
     this.elements.detailsArea.appendChild(container);
+  }
+
+  // Flip the current sprite between front and back (keyboard entry point;
+  // reuses the sprite's own click handler, which has the current Pokémon).
+  toggleSprite() {
+    const img = this.elements.mainScreen?.querySelector(".pokemon-image");
+    if (img) img.click();
   }
 
   /**
