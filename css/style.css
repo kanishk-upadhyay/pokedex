@@ -217,6 +217,23 @@ body {
     text-transform: capitalize;
 }
 
+/* Evolution names are clickable buttons styled as inline links */
+.evolution-node {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    text-transform: capitalize;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.evolution-node:hover {
+    filter: brightness(1.35);
+}
+
 /* Add Pokemon color classes for text */
 /* Type color classes using CSS variables */
 [class^="color-"] {

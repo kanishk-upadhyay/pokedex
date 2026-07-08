@@ -163,8 +163,9 @@ class UIController {
   }
 
   initEventListeners(handlers) {
-    const { onTogglePokedex, onNavigate, onSearch, onKeyboardNavigation, onShowShortcuts } =
+    const { onTogglePokedex, onNavigate, onSearch, onKeyboardNavigation, onShowShortcuts, onSelectPokemon } =
       handlers;
+    this._onSelectPokemon = onSelectPokemon;
 
     this._onActivate(this.elements.yellowButton, onTogglePokedex);
     this._onActivate(this.elements.cameraLens, onTogglePokedex);
@@ -635,10 +636,13 @@ class UIController {
       }
 
       const node = el(
-        "span",
-        { 
-          class: elementClass,
-          style: elementStyle
+        "button",
+        {
+          type: "button",
+          class: `evolution-node ${elementClass}`,
+          style: elementStyle,
+          onClick: () => this._onSelectPokemon?.(name),
+          "aria-label": `View ${name}`,
         },
         name,
       );
