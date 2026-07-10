@@ -39,7 +39,7 @@
 
 ## Features
 
-*   **Comprehensive data.** Sprites (front and back), types, abilities, moves, and evolution chains for over 1,000 Pokémon species.
+*   **Comprehensive data.** Front and (where available) back sprites, types, abilities, moves, and evolution chains for 1,000+ Pokémon and forms.
 *   **Fuzzy search.** Find Pokémon by name or Pokédex number with typo tolerance that also handles special forms (for example, `charzard` surfaces `charizard`, `charizard-mega-x`, and `charizard-gmax`).
 *   **Many ways to navigate.** D-pad for sequential browsing, a number pad for direct ID entry, clickable search suggestions, and full keyboard control with `?` for the shortcuts overlay.
 *   **Sprite interaction.** Click a sprite (or press Space) to flip between front and back views.

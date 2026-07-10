@@ -1,9 +1,26 @@
 {
   "name": "pokedex",
   "version": "1.0.0",
-  "description": "A vanilla-JS Pokédex web app.",
+  "description": "A fast, offline-capable Pok\u00e9dex PWA built in dependency-free vanilla JavaScript.",
   "type": "module",
   "private": true,
+  "license": "GPL-3.0-only",
+  "author": "Kanishk Upadhyay",
+  "homepage": "https://pokedex.kanishk.live",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kanishk-upadhyay/pokedex.git"
+  },
+  "keywords": [
+    "pokedex",
+    "pokeapi",
+    "pwa",
+    "vanilla-js",
+    "service-worker",
+    "offline-first",
+    "accessibility",
+    "no-framework"
+  ],
   "scripts": {
     "test": "node --test"
   }
