@@ -79,29 +79,44 @@ export function tokenizeNames(names) {
  * Fuzzy-match `query` against `names` (already lowercase), using a precomputed
  * per-name token list (from tokenizeNames, aligned by index).
  *
- * Tiered, cheapest first:
- *   1. exact substring
- *   2. prefix
- *   3. multi-token match for special forms (e.g. "mega charizard" ->
- *      "charizard-mega") with per-token Levenshtein <= 1 typo tolerance.
+ * Literal matches (names containing the query) come first, ranked by how well
+ * they match — exact, then prefix, then a word-boundary (token) match, then a
+ * mid-string match — keeping the original list order within a rank. So typing
+ * "mew" lists "mew" before "mewtwo". When nothing matches literally, it falls
+ * back to a multi-token pass with per-token Levenshtein <= 1 typo tolerance
+ * (e.g. "charzard" -> "charizard", "mega charizard" -> "charizard-mega").
  *
  * @param {string[]} names
  * @param {string} query
  * @param {string[][]} nameTokens
- * @returns {string[]} up to 100 matching names
+ * @returns {string[]} up to 100 matching names, most relevant first
  */
 export function fuzzySearch(names, query, nameTokens) {
   const q = query.toLowerCase();
+  if (!q.trim()) return [];
 
-  // 1. Exact substring matches (fast path)
-  const exactMatches = names.filter((name) => name.includes(q));
-  if (exactMatches.length > 0) return exactMatches.slice(0, 100);
+  // 1. Literal matches, ranked by quality:
+  //    0 exact · 1 prefix · 2 word-boundary (a token starts with q) · 3 mid-string
+  const literal = [];
+  for (let i = 0; i < names.length; i++) {
+    const name = names[i];
+    const at = name.indexOf(q);
+    if (at === -1) continue;
+    let rank;
+    if (name === q) rank = 0;
+    else if (at === 0) rank = 1;
+    else if ((nameTokens[i] || []).some((t) => t.startsWith(q))) rank = 2;
+    else rank = 3;
+    literal.push({ name, rank, i });
+  }
+  if (literal.length > 0) {
+    // Best rank first; preserve the original (dex) order within a rank.
+    literal.sort((a, b) => a.rank - b.rank || a.i - b.i);
+    return literal.slice(0, 100).map((m) => m.name);
+  }
 
-  // 2. StartsWith matches
-  const startsWithMatches = names.filter((name) => name.startsWith(q));
-  if (startsWithMatches.length > 0) return startsWithMatches.slice(0, 100);
-
-  // 3. Multi-token matching with per-token typo tolerance
+  // 2. Multi-token matching with per-token typo tolerance (fallback for typos
+  //    and reordered special forms).
   const queryTokens = q.replace(/[-_]/g, " ").trim().split(/\s+/).filter(Boolean);
   if (queryTokens.length === 0) return [];
 
