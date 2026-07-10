@@ -1,10 +1,22 @@
 /*
-  Simple Service Worker for Pokédex
-  - Basic caching of static assets
-  - Simple network-first strategy for all requests
+  Service Worker for Pokédex.
+  Per-resource caching, each in its own bucket:
+   - shell : cache-first for the app shell (precached on install)
+   - api   : stale-while-revalidate for PokeAPI JSON, capped (FIFO eviction)
+   - img   : cache-first for sprites (immutable), capped (FIFO eviction)
 */
 
-const CACHE_NAME = "pokedex-v7";
+const VERSION = "v8";
+const SHELL_CACHE = `pokedex-shell-${VERSION}`;
+const API_CACHE = `pokedex-api-${VERSION}`;
+const IMG_CACHE = `pokedex-img-${VERSION}`;
+const CURRENT_CACHES = [SHELL_CACHE, API_CACHE, IMG_CACHE];
+
+// Caps keep the persistent caches from growing without bound as the user
+// browses the full dex — otherwise storage pressure can evict the whole
+// origin cache and break offline support.
+const MAX_API_ENTRIES = 400;
+const MAX_IMG_ENTRIES = 400;
 
 const STATIC_FILES = [
   "/",
@@ -21,17 +33,27 @@ const STATIC_FILES = [
   "/icons/icon-512.png",
 ];
 
-// Install - pre-cache static files
+// Evict oldest entries (FIFO — Cache.keys() is insertion-ordered) once a
+// cache exceeds its cap.
+async function trimCache(cacheName, maxItems) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  for (let i = 0; i < keys.length - maxItems; i++) {
+    await cache.delete(keys[i]);
+  }
+}
+
+// Install - pre-cache the app shell
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
-      .open(CACHE_NAME)
+      .open(SHELL_CACHE)
       .then((cache) => cache.addAll(STATIC_FILES))
       .then(() => self.skipWaiting()),
   );
 });
 
-// Activate - clean up old caches
+// Activate - drop any cache that is not part of this version
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
@@ -39,9 +61,7 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys.map((key) => {
-            if (key !== CACHE_NAME) {
-              return caches.delete(key);
-            }
+            if (!CURRENT_CACHES.includes(key)) return caches.delete(key);
           }),
         ),
       )
@@ -49,27 +69,21 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Fetch - smart caching strategy
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
   const url = new URL(event.request.url);
 
-  // Cache-first for static assets (JS, CSS, HTML)
+  // Cache-first for the app shell (same-origin JS/CSS/HTML/icons/manifest)
   if (url.origin === self.location.origin) {
     event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
         return fetch(event.request).then((response) => {
-          // Only cache genuine same-origin ("basic") 200s — never an opaque
-          // or cross-origin redirect that slipped through.
+          // Only cache genuine same-origin ("basic") 200s.
           if (response.status === 200 && response.type === "basic") {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseClone);
-            });
+            const clone = response.clone();
+            caches.open(SHELL_CACHE).then((cache) => cache.put(event.request, clone));
           }
           return response;
         });
@@ -78,37 +92,34 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Stale-While-Revalidate for API calls: return cached data immediately while fetching fresh data in background
+  // Stale-while-revalidate for PokeAPI JSON (capped)
   if (url.hostname === "pokeapi.co") {
     event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        // Fetch fresh data in the background
-        const fetchPromise = fetch(event.request).then((response) => {
-          // Update cache with fresh response
-          if (response.status === 200) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseClone);
-            });
-          }
-          return response;
-        }).catch((error) => {
-          // If network request fails, return cached response if available
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          throw error;
-        });
-
-        // Return cached response if available, otherwise wait for network
-        return cachedResponse || fetchPromise;
-      })
+      caches.match(event.request).then((cached) => {
+        const fetchPromise = fetch(event.request)
+          .then((response) => {
+            if (response.status === 200) {
+              const clone = response.clone();
+              caches.open(API_CACHE).then((cache) =>
+                cache
+                  .put(event.request, clone)
+                  .then(() => trimCache(API_CACHE, MAX_API_ENTRIES)),
+              );
+            }
+            return response;
+          })
+          .catch((error) => {
+            if (cached) return cached;
+            throw error;
+          });
+        return cached || fetchPromise;
+      }),
     );
     return;
   }
 
-  // Cache-first for images (sprites are immutable). Cross-origin sprite
-  // responses are opaque (status 0), so cache on ok OR opaque.
+  // Cache-first for sprites (immutable, capped). Cross-origin sprite responses
+  // are opaque (status 0), so cache on ok OR opaque.
   if (event.request.destination === "image") {
     event.respondWith(
       caches.match(event.request).then((cached) => {
@@ -116,7 +127,11 @@ self.addEventListener("fetch", (event) => {
         return fetch(event.request).then((response) => {
           if (response && (response.ok || response.type === "opaque")) {
             const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+            caches.open(IMG_CACHE).then((cache) =>
+              cache
+                .put(event.request, clone)
+                .then(() => trimCache(IMG_CACHE, MAX_IMG_ENTRIES)),
+            );
           }
           return response;
         });
@@ -125,10 +140,8 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Default: try network, fallback to cache
-  event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request)),
-  );
+  // Default: network, fall back to any cache
+  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
 });
 
 // Handle messages to skip waiting
