@@ -29,8 +29,8 @@
 **Engineering**
 
 *   An LRU cache with TTL, plus in-flight request de-duplication, so repeated and concurrent lookups hit memory instead of the network.
-*   Typo-tolerant fuzzy search: tiered matching backed by a threshold-bounded, rolling-row Levenshtein distance, extracted into a pure module (`js/search.js`) with unit tests.
-*   A service worker with per-resource strategies: cache-first app shell, stale-while-revalidate API, cache-first immutable sprites.
+*   Typo-tolerant fuzzy search: literal matches ranked by quality (exact, prefix, word-boundary, then substring) with a threshold-bounded, rolling-row Levenshtein fallback for typos. Extracted into a pure, unit-tested module (`js/search.js`).
+*   A service worker with per-resource strategies in separate, size-bounded caches: cache-first app shell, stale-while-revalidate API, cache-first immutable sprites (with FIFO eviction so storage can't grow without limit).
 *   Sprites served through the jsDelivr CDN mirror to sidestep `raw.githubusercontent.com` rate limiting.
 *   A Content-Security-Policy and a service-worker hardening pass (see [Security](#security)).
 *   Tests run in CI on every push via Node's built-in test runner.
@@ -43,6 +43,7 @@
 *   **Fuzzy search.** Find Pokémon by name or Pokédex number with typo tolerance that also handles special forms (for example, `charzard` surfaces `charizard`, `charizard-mega-x`, and `charizard-gmax`).
 *   **Many ways to navigate.** D-pad for sequential browsing, a number pad for direct ID entry, clickable search suggestions, and full keyboard control with `?` for the shortcuts overlay.
 *   **Sprite interaction.** Click a sprite (or press Space) to flip between front and back views.
+*   **Deep links.** Click a Pokémon's name to open its entry on [PokémonDB](https://pokemondb.net) in a new tab, mapped to the base species so forms like Mega and Gmax resolve correctly.
 *   **Evolution visualization.** Complete evolution lines rendered as clickable nodes, including branched chains.
 *   **Offline first.** The whole experience keeps working with no network once assets are cached.
 
@@ -107,7 +108,7 @@ Then open `http://localhost:8000`.
 
 ## Testing
 
-The fuzzy-search algorithm (tokenization, multi-token matching, and a threshold-bounded Levenshtein distance) lives in `js/search.js` as pure functions, covered by unit tests using Node's built-in test runner with zero dependencies:
+The app's pure logic is unit-tested with Node's built-in test runner (zero dependencies): the ranked fuzzy search, tokenization, and threshold-bounded Levenshtein distance in `js/search.js`, plus the LRU cache (eviction and TTL) and sprite-URL rewriter in `js/api.js`.
 
 ```bash
 node --test
