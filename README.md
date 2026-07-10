@@ -123,3 +123,7 @@ npm test
 Licensed under the **GNU General Public License v3.0**. See [`LICENSE`](LICENSE) for the full text.
 
 Pokémon and Pokémon character names are trademarks of Nintendo, Game Freak, and The Pokémon Company. This is a non-commercial fan project. Sprite images and data are fetched at runtime from [PokéAPI](https://pokeapi.co/) and are not redistributed in this repository.
+
+---
+
+<div align="center"><pre>...BOREDOM BREEDS OVERENGINEERING...</pre></div>
