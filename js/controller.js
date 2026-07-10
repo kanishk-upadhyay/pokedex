@@ -191,7 +191,7 @@ class PokedexController {
     if (nextIndex !== currentIndex) {
       const nextPokemon = this.state.pokemonList[nextIndex];
       try {
-        await this.fetchPokemonById(nextPokemon.id);
+        await this.fetchPokemonById(nextPokemon.id, { keepScreen: true });
       } catch (err) {
         this.ui.showError("Navigation failed. Try another direction.");
       }
@@ -336,7 +336,7 @@ class PokedexController {
 
   async fetchPokemonById(id, options = {}) {
     try {
-      this.ui.showLoading("Loading...");
+      this.ui.showLoading("Loading...", { keepScreen: !!options.keepScreen });
       // Render the sprite and core details from a single request first...
       const base = await this.getPokemonBase(id, options);
       this.state.currentId = base.id;
@@ -437,7 +437,7 @@ class PokedexController {
     const id = this.state.pokemonNameMap.get(String(name).toLowerCase());
     if (!id) return;
     this.ui.setSearchValue(name);
-    this.fetchPokemonById(id).catch((err) => {
+    this.fetchPokemonById(id, { keepScreen: true }).catch((err) => {
       if (err?.name !== "AbortError") {
         this.ui.showError(`Error loading ${name}.`);
       }
@@ -473,7 +473,7 @@ class PokedexController {
     if (/^\d+$/.test(query)) {
       const id = parseInt(query, 10);
       if (id >= 1 && id <= this.state.totalPokemon) {
-        await this.fetchPokemonById(id, options);
+        await this.fetchPokemonById(id, { ...options, keepScreen: true });
       } else {
         this.ui.showNotice(`Pokémon #${id} out of range.`);
       }
@@ -482,7 +482,7 @@ class PokedexController {
 
     const exactMatch = this.state.pokemonNameMap.get(query);
     if (exactMatch) {
-      await this.fetchPokemonById(exactMatch, options);
+      await this.fetchPokemonById(exactMatch, { ...options, keepScreen: true });
       return;
     }
 
@@ -499,7 +499,7 @@ class PokedexController {
     if (allMatches.length === 1) {
       const singleMatchId = this.state.pokemonNameMap.get(allMatches[0]);
       if (singleMatchId) {
-        await this.fetchPokemonById(singleMatchId);
+        await this.fetchPokemonById(singleMatchId, { keepScreen: true });
         return;
       }
     }
