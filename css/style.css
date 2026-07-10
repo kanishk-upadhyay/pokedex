@@ -491,6 +491,7 @@ body {
 
 /* Visible keyboard focus ring on every interactive control (Pokédex yellow,
    readable on both the red shell and the dark screen). */
+.pokemon-name-link:focus-visible,
 .pokemon-search-input:focus-visible,
 .pokemon-search-button:focus-visible,
 .blue-button:focus-visible,
@@ -984,4 +985,19 @@ body {
         transition-duration: 0.001ms !important;
         scroll-behavior: auto !important;
     }
+}
+
+/* External link on the Pokémon name -> its PokémonDB page.
+   No underline or icon (kept clean); a subtle brightness lift on hover
+   signals it is interactive. */
+.pokemon-name-link {
+    color: inherit;
+    -webkit-text-fill-color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    transition: filter 0.15s ease;
+}
+
+.pokemon-name-link:hover {
+    filter: brightness(1.2);
 }
