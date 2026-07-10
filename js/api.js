@@ -9,12 +9,12 @@
  */
 
 // Configuration Constants
-export const API_BASE_URL = "https://pokeapi.co/api/v2";
-export const MIN_REQUEST_INTERVAL = 50;
+const API_BASE_URL = "https://pokeapi.co/api/v2";
+const MIN_REQUEST_INTERVAL = 50;
 export const SEARCH_DEBOUNCE_MS = 120;
 export const PRELOAD_MAX_ADJACENT = 3;
-export const CACHE_EXPIRATION = 7 * 24 * 60 * 60 * 1000; // 7 days
-export const CACHE_MAX_SIZE = 300;
+const CACHE_EXPIRATION = 7 * 24 * 60 * 60 * 1000; // 7 days
+const CACHE_MAX_SIZE = 300;
 export const NAME_LIST_KEY = "pokedex_name_list_v1";
 export const NAME_LIST_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -121,7 +121,7 @@ export class StorageHelper {
 /**
  * Simple request throttle to space API calls and avoid rate limiting
  */
-export class RequestQueue {
+class RequestQueue {
   constructor(minInterval = MIN_REQUEST_INTERVAL) {
     this.minInterval = minInterval;
     this.lastRequestTime = 0;
