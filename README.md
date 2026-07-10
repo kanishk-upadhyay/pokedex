@@ -1,102 +1,113 @@
-# Pokédex Web Application
+# Pokédex
 
-A modern, interactive, and feature-rich Pokédex web application built with vanilla HTML, CSS, and JavaScript. It provides a fast and engaging experience for browsing and searching for your favorite Pokémon, complete with offline capabilities.
+**Boredom breeds overengineering.** Nobody needed another Pokédex. I was bored, made one anyway, then kept going until it had fuzzy search, offline support, and full keyboard access. All in vanilla JS.
 
-## Screenshots
-<p align="center" width="100%">
-<img width="25%" alt="Pokédex" src="https://github.com/user-attachments/assets/f7c44fd3-fdc9-44fc-8816-5986c78185d4" /> <img width="50%" alt="Pokédex" src="https://github.com/user-attachments/assets/495f3e42-4a21-4b99-97e4-2c632146b214" />
+[![Live demo](https://img.shields.io/badge/demo-live-e61515?style=flat-square)](https://pokedex.kanishk.live)
+[![CI](https://github.com/kanishk-upadhyay/pokedex/actions/workflows/ci.yml/badge.svg)](https://github.com/kanishk-upadhyay/pokedex/actions/workflows/ci.yml)
+[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue?style=flat-square)](LICENSE)
+![Dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen?style=flat-square)
+![PWA: installable](https://img.shields.io/badge/PWA-installable-5a0fc8?style=flat-square)
+
+<p align="center">
+  <img src="assets/demo.gif" alt="Opening the Pokédex to reveal Mega Charizard X, flipping the sprite, and running a typo-tolerant search" width="480">
 </p>
 
----
-
-## Key Features
-
-*   **Comprehensive Pokémon Data:** View sprites (front & back), types, abilities, moves, and evolution chains for over 1,000 Pokémon species.
-*   **Advanced Fuzzy Search:** Instantly find Pokémon by name or Pokédex number with powerful typo-tolerant search that handles special forms (e.g., "mega charizard" for "charizard-mega").
-*   **Interactive UI with Multiple Navigation Options:**
-    *   D-pad controls for sequential browsing
-    *   Full keyboard navigation with '?' for shortcuts
-    *   Number pad for direct ID entry
-    *   Clickable search suggestions with dynamic sizing
-*   **Enhanced Visual Design:**
-    *   Pokémon names styled with primary type color as text fill and secondary type color as text stroke for dual-type Pokémon
-    *   Responsive grid layout for search suggestions
-    *   Dynamic glass-like effects and animations
-*   **Offline First Architecture:** Fully functional offline experience using Service Worker technology to cache assets, API data, and images.
-*   **Performance Optimized:**
-    *   Smart LRU caching system for efficient memory management
-    *   Background preloading of adjacent Pokémon for faster navigation
-    *   Progressive data loading for quick initial load times
-    *   Request queuing to respect API rate limits
-*   **Evolution Chain Visualization:** View complete evolution lines with clear visual indicators.
-*   **Sprite Interaction:** Click Pokémon sprites to toggle between front and back views with appropriate error handling.
+> Fast, offline-capable Pokédex PWA. Dependency-free vanilla JS, no build step. **[Try it live at pokedex.kanishk.live](https://pokedex.kanishk.live)**
 
 ---
 
-## Tech Stack
+## Highlights
 
-*   **Frontend:** HTML5, CSS3, Vanilla JavaScript (ES6+)
-*   **Build System:** ES6 Modules for modular architecture
-*   **API:** [PokéAPI V2](https://pokeapi.co/)
-*   **Offline Storage:** Service Worker API, LocalStorage
-*   **Algorithms:** Levenshtein distance for fuzzy search, LRU cache implementation
+**Frontend craft**
+
+*   No framework, no build step, no dependencies. Just ES modules the browser runs directly.
+*   Installable PWA that works fully offline. The service worker caches the app shell, API responses, and sprites.
+*   Progressive rendering: the sprite paints before species and evolution data finish loading, so the screen fills instantly instead of waiting on the slowest request.
+*   Full keyboard operability and screen-reader support (see [Accessibility](#accessibility)).
+*   Dual-type Pokémon get a layered-depth name treatment tinted with the secondary type color, plus crisp pixel-art sprites, a front/back sprite flip, and clickable evolution chains.
+
+**Engineering**
+
+*   An LRU cache with TTL, plus in-flight request de-duplication, so repeated and concurrent lookups hit memory instead of the network.
+*   Typo-tolerant fuzzy search: tiered matching backed by a threshold-bounded, rolling-row Levenshtein distance, extracted into a pure module (`js/search.js`) with unit tests.
+*   A service worker with per-resource strategies: cache-first app shell, stale-while-revalidate API, cache-first immutable sprites.
+*   Sprites served through the jsDelivr CDN mirror to sidestep `raw.githubusercontent.com` rate limiting.
+*   A Content-Security-Policy and a service-worker hardening pass (see [Security](#security)).
+*   Tests run in CI on every push via Node's built-in test runner.
+
+---
+
+## Features
+
+*   **Comprehensive data.** Sprites (front and back), types, abilities, moves, and evolution chains for over 1,000 Pokémon species.
+*   **Fuzzy search.** Find Pokémon by name or Pokédex number with typo tolerance that also handles special forms (for example, `charzard` surfaces `charizard`, `charizard-mega-x`, and `charizard-gmax`).
+*   **Many ways to navigate.** D-pad for sequential browsing, a number pad for direct ID entry, clickable search suggestions, and full keyboard control with `?` for the shortcuts overlay.
+*   **Sprite interaction.** Click a sprite (or press Space) to flip between front and back views.
+*   **Evolution visualization.** Complete evolution lines rendered as clickable nodes, including branched chains.
+*   **Offline first.** The whole experience keeps working with no network once assets are cached.
 
 ---
 
 ## Architecture
 
-The application follows a modular architecture with clear separation of concerns:
+A modular architecture with a clear separation of concerns, and no build tooling between the source and the browser:
 
-*   **`index.js`:** Application entry point; instantiates the controller and boots the app
-*   **`controller.js`:** Main application orchestrator, manages state and coordinates between modules
-*   **`ui.js`:** Handles all DOM manipulation, rendering, and user interactions
-*   **`api.js`:** Manages API communication, caching, and rate limiting
-*   **`search.js`:** Pure, unit-tested fuzzy-search algorithm (tokenization + Levenshtein)
-*   **`dom.js`:** Safe and efficient DOM creation utilities
-*   **`sw.js`:** Service worker for offline capabilities and caching
+*   **`js/index.js`** Application entry point. Instantiates the controller and boots the app.
+*   **`js/controller.js`** Orchestrator. Owns state and coordinates the other modules.
+*   **`js/ui.js`** The view layer. All DOM rendering and user interaction.
+*   **`js/api.js`** API communication, the LRU cache, request queueing, and storage helpers.
+*   **`js/search.js`** Pure, unit-tested fuzzy search (tokenization plus Levenshtein).
+*   **`js/dom.js`** Small helpers that build DOM nodes safely with text nodes and attributes.
+*   **`sw.js`** Service worker for offline caching.
+
+---
+
+## Accessibility
+
+*   Every interactive element is keyboard operable with Enter and Space, including the custom button-like controls (exposed with `role="button"`).
+*   Visible `:focus-visible` rings on all controls, so keyboard focus is always obvious.
+*   Status and error messages use `aria-live` and are color-coded by kind with icons, so meaning is never conveyed by color alone.
+*   Motion respects `prefers-reduced-motion`.
+*   Space opens the Pokédex when it is closed and flips the current sprite when it is open.
+
+---
+
+## Security
+
+*   A strict **Content-Security-Policy** (`default-src 'self'` with tightly scoped `img-src` and `connect-src`) as a safety net against markup injection.
+*   The DOM is built with text nodes and `setAttribute` rather than `innerHTML`, so untrusted PokéAPI data cannot inject markup in the first place.
+*   The service worker only caches genuine, same-origin responses for the app shell and matches its API host exactly rather than by substring.
+*   No third-party scripts or stylesheets are loaded, so there is effectively no script supply-chain surface.
+
+---
+
+## Tech Stack
+
+*   **Frontend:** HTML5, CSS3, vanilla JavaScript (ES6+ modules)
+*   **API:** [PokéAPI v2](https://pokeapi.co/)
+*   **Offline:** Service Worker API, Cache Storage, localStorage
+*   **PWA:** Web App Manifest with maskable icons
+*   **Algorithms:** Levenshtein distance for fuzzy search, an LRU cache with TTL
 
 ---
 
 ## Getting Started
 
-### Prerequisites
+No install, no build. All you need is a modern browser and a static file server (a server is needed for the service worker and ES modules to work).
 
-All you need is a modern web browser that supports ES6 modules and Service Workers (e.g., Chrome, Firefox, Safari, Zen).
+```bash
+git clone https://github.com/kanishk-upadhyay/pokedex.git
+cd pokedex
+python3 -m http.server 8000
+```
 
-### Installation & Running Locally
-
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/kanishk-upadhyay/pokedex.git
-    cd pokedex
-    ```
-
-2.  **Open the application:**
-    For the best experience (especially for features like offline caching), it's recommended to run this project using a simple local web server.
-
-    *   **Using Python:**
-        ```bash
-        python -m http.server
-        ```
-        Then, open `http://localhost:8000` in your browser.
-
-    *   **Using Node.js (with `live-server`):**
-        ```bash
-        npm install -g live-server
-        live-server
-        ```
-        This will automatically open the page in your browser.
-
-    You can also open the `index.html` file directly in your browser, but some features may be limited by browser security policies for local files.
+Then open `http://localhost:8000`.
 
 ---
 
 ## Testing
 
-The fuzzy-search algorithm (tokenization, multi-token matching, and a
-threshold-bounded Levenshtein distance) is isolated in `js/search.js` as pure
-functions and covered by unit tests using Node's built-in test runner (no
-dependencies):
+The fuzzy-search algorithm (tokenization, multi-token matching, and a threshold-bounded Levenshtein distance) lives in `js/search.js` as pure functions, covered by unit tests using Node's built-in test runner with zero dependencies:
 
 ```bash
 node --test
@@ -106,12 +117,8 @@ npm test
 
 ---
 
-## Performance & Offline Capabilities
+## License
 
-The application is built with performance and offline functionality as core priorities:
+Licensed under the **GNU General Public License v3.0**. See [`LICENSE`](LICENSE) for the full text.
 
-*   **Service Worker:** Caches static assets and API responses for offline use
-*   **Smart Caching:** LRU cache with TTL expiration for efficient memory usage
-*   **Progressive Loading:** Loads Pokémon database in chunks to prevent UI blocking
-*   **Background Preloading:** Fetches adjacent Pokémon data for instant navigation
-*   **Request Queuing:** Prevents API rate limit issues during heavy usage
+Pokémon and Pokémon character names are trademarks of Nintendo, Game Freak, and The Pokémon Company. This is a non-commercial fan project. Sprite images and data are fetched at runtime from [PokéAPI](https://pokeapi.co/) and are not redistributed in this repository.
