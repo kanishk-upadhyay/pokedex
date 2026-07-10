@@ -59,7 +59,9 @@ self.addEventListener("fetch", (event) => {
           return cachedResponse;
         }
         return fetch(event.request).then((response) => {
-          if (response.status === 200) {
+          // Only cache genuine same-origin ("basic") 200s — never an opaque
+          // or cross-origin redirect that slipped through.
+          if (response.status === 200 && response.type === "basic") {
             const responseClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(event.request, responseClone);
@@ -73,7 +75,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   // Stale-While-Revalidate for API calls: return cached data immediately while fetching fresh data in background
-  if (url.hostname.includes("pokeapi.co")) {
+  if (url.hostname === "pokeapi.co") {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
         // Fetch fresh data in the background
@@ -127,6 +129,8 @@ self.addEventListener("fetch", (event) => {
 
 // Handle messages to skip waiting
 self.addEventListener("message", (event) => {
+  // Ignore messages from any other origin (defense-in-depth).
+  if (event.origin && event.origin !== self.location.origin) return;
   if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
