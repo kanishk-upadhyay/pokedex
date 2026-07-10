@@ -6,7 +6,7 @@
    - img   : cache-first for sprites (immutable), capped (FIFO eviction)
 */
 
-const VERSION = "v9";
+const VERSION = "v10";
 const SHELL_CACHE = `pokedex-shell-${VERSION}`;
 const API_CACHE = `pokedex-api-${VERSION}`;
 const IMG_CACHE = `pokedex-img-${VERSION}`;

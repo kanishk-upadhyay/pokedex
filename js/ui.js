@@ -153,6 +153,11 @@ class UIController {
    */
   _onActivate(element, handler) {
     if (!element) return;
+    // Don't let a mouse click park keyboard focus on the control: otherwise a
+    // later Space press activates this (invisibly focused) button instead of
+    // reaching the global Space handler that flips the sprite / opens the dex.
+    // Tab focus still works, so keyboard operability is unaffected.
+    element.addEventListener("mousedown", (e) => e.preventDefault());
     element.addEventListener("click", handler);
     element.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
