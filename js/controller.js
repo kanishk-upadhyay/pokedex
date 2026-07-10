@@ -164,29 +164,12 @@ class PokedexController {
       return;
     }
 
-    let nextIndex;
-    switch (direction) {
-      case "up":
-        nextIndex = Math.max(0, currentIndex - 10);
-        break;
-      case "down":
-        nextIndex = Math.min(
-          this.state.pokemonList.length - 1,
-          currentIndex + 10,
-        );
-        break;
-      case "left":
-        nextIndex = Math.max(0, currentIndex - 1);
-        break;
-      case "right":
-        nextIndex = Math.min(
-          this.state.pokemonList.length - 1,
-          currentIndex + 1,
-        );
-        break;
-      default:
-        nextIndex = currentIndex;
-    }
+    // Wrap around the ends: past the last Pokémon loops to the first and
+    // vice-versa. Up/Down jump by 10, Left/Right by 1; modulo keeps the index
+    // in range for any step (the total count is just the list length).
+    const len = this.state.pokemonList.length;
+    const step = { up: -10, down: 10, left: -1, right: 1 }[direction] ?? 0;
+    const nextIndex = (((currentIndex + step) % len) + len) % len;
 
     if (nextIndex !== currentIndex) {
       const nextPokemon = this.state.pokemonList[nextIndex];
