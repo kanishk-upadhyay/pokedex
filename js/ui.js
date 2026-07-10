@@ -327,9 +327,11 @@ class UIController {
     area.textContent = message;
   }
 
-  showLoading(message = "Loading...") {
+  showLoading(message = "Loading...", { keepScreen = false } = {}) {
     this._setDetailsMessage(message, "loading");
-    if (this.elements.mainScreen) {
+    // Search keeps the current sprite visible: the left screen is not used to
+    // show search results, so only blank it for a full Pokémon load.
+    if (!keepScreen && this.elements.mainScreen) {
       this.elements.mainScreen.innerHTML =
         '<div class="loading">Loading...</div>';
     }

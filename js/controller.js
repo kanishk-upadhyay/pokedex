@@ -467,7 +467,8 @@ class PokedexController {
     }
 
     const query = raw.toLowerCase();
-    this.ui.showLoading("Searching...");
+    // Keep the current sprite on screen while searching.
+    this.ui.showLoading("Searching...", { keepScreen: true });
 
     if (/^\d+$/.test(query)) {
       const id = parseInt(query, 10);
@@ -475,7 +476,6 @@ class PokedexController {
         await this.fetchPokemonById(id, options);
       } else {
         this.ui.showNotice(`Pokémon #${id} out of range.`);
-        this.ui.clearMainScreen();
       }
       return;
     }
@@ -509,10 +509,8 @@ class PokedexController {
       this.ui.renderPaginatedSuggestions(allMatches, 10, (selectedItem) => {
         this.selectPokemonByName(selectedItem.name);
       }); // Show 10 at a time with selection callback
-      this.ui.clearMainScreen();
     } else {
       this.ui.showNotice("Pokémon not found. Check spelling.");
-      this.ui.clearMainScreen();
     }
   }
   
