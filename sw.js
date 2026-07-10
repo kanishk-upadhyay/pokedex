@@ -4,7 +4,7 @@
   - Simple network-first strategy for all requests
 */
 
-const CACHE_NAME = "pokedex-v3";
+const CACHE_NAME = "pokedex-v4";
 
 const STATIC_FILES = [
   "/",
@@ -15,6 +15,10 @@ const STATIC_FILES = [
   "/js/controller.js",
   "/js/dom.js",
   "/js/ui.js",
+  "/js/search.js",
+  "/manifest.webmanifest",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
 ];
 
 // Install - pre-cache static files
