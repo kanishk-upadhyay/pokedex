@@ -7,6 +7,7 @@
             content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://cdn.jsdelivr.net https://raw.githubusercontent.com; connect-src 'self' https://pokeapi.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
         />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="description" content="A fast, offline-capable Pokédex PWA in vanilla JavaScript. Search 1,000+ Pokémon by name or number with typo-tolerant fuzzy search, types, and evolutions." />
         <title>Pokédex</title>
         <link rel="preconnect" href="https://pokeapi.co" crossorigin />
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
@@ -25,6 +26,7 @@
         <div
             id="pokedex"
             class="pokedex"
+            role="main"
             aria-label="Pokédex"
         >
             <div class="left-panel">
