@@ -482,10 +482,24 @@ class UIController {
 
     // The name element has a glass-like background that may be modified by JS.
     // The text color will be set by JS based on the primary type.
+    // Link the name out to its PokémonDB page. PokémonDB keys URLs by base
+    // species (e.g. Mega Charizard X lives on /pokedex/charizard), so use the
+    // species name rather than the form name to avoid 404s.
+    const speciesName = pokemon.species?.name || pokemon.name;
     const nameEl = el(
       "h3",
       { class: "pokemon-name" },
-      pokemon.name,
+      el(
+        "a",
+        {
+          class: "pokemon-name-link",
+          href: `https://pokemondb.net/pokedex/${encodeURIComponent(speciesName)}`,
+          target: "_blank",
+          rel: "noopener noreferrer",
+          title: `View ${pokemon.name} on PokémonDB`,
+        },
+        pokemon.name,
+      ),
       el("span", { class: "pokemon-id" }, ` - ${pokemon.id}`),
     );
 
