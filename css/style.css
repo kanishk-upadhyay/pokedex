@@ -263,6 +263,17 @@ body {
     background-color: var(--type-color, #ccc); /* Default fallback */
 }
 
+/* Dark text on the light-background types so the label meets WCAG AA contrast.
+   The five genuinely dark types (fighting, poison, ghost, dragon, dark) keep
+   white text below. White on the others fails AA and is hard to read. */
+.type-chip.normal, .type-chip.fire, .type-chip.water, .type-chip.electric,
+.type-chip.grass, .type-chip.ice, .type-chip.ground, .type-chip.flying,
+.type-chip.psychic, .type-chip.bug, .type-chip.rock, .type-chip.steel,
+.type-chip.fairy {
+    color: #1a1a1a;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
 /* Use CSS variables for type chips */
 .type-chip.normal {
     --type-color: var(--color-normal);
