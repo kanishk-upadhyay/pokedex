@@ -9,7 +9,7 @@ Nobody needed another Pokédex. I was bored, made one anyway, then kept going un
 ![PWA: installable](https://img.shields.io/badge/PWA-installable-5a0fc8?style=flat-square)
 
 <p align="center">
-  <img src="assets/demo.gif" alt="Opening the Pokédex to reveal Mega Charizard X, flipping the sprite, and running a typo-tolerant search" width="480">
+  <img src="https://github.com/kanishk-upadhyay/pokedex/releases/download/demo-assets/demo.gif" alt="Opening the Pokédex to reveal Mega Charizard X, flipping the sprite, and running a typo-tolerant search" width="480">
 </p>
 
 > Fast, offline-capable Pokédex PWA. Dependency-free vanilla JS, no build step. **[Try it live at pokedex.kanishk.live](https://pokedex.kanishk.live)**
