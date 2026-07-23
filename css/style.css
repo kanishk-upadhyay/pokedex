@@ -37,6 +37,15 @@
         -apple-system, BlinkMacSystemFont, "avenir next", avenir, "segoe ui",
         "helvetica neue", "Adwaita Sans", Cantarell, Ubuntu, Roboto, Noto,
         helvetica, arial, sans-serif;
+    --font-family-title: "Press Start 2P", var(--font-family-main);
+}
+
+@font-face {
+    font-family: "Press Start 2P";
+    src: url("../fonts/PressStart2P.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
 }
 
 html {
@@ -60,16 +69,17 @@ body {
 /* Title styling */
 .pokedex-title {
     color: #ffcc00;
-    font-size: 3rem;
+    font-family: var(--font-family-title);
+    font-size: 2rem;
     text-transform: uppercase;
     margin-bottom: 20px;
-    letter-spacing: 4px;
+    letter-spacing: 2px;
     text-shadow:
         0 0 10px var(--color-shadow-yellow),
         0 0 20px rgba(255, 204, 0, 0.5),
         0 0 30px rgba(255, 204, 0, 0.3);
     animation: pulsate 1.5s infinite alternate;
-    font-weight: bold;
+    font-weight: normal;
     max-width: 100%;
     text-align: center;
     transition: all 0.3s ease;

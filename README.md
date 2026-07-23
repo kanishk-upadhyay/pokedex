@@ -124,6 +124,8 @@ Licensed under the **GNU General Public License v3.0**. See [`LICENSE`](LICENSE)
 
 Pokémon and Pokémon character names are trademarks of Nintendo, Game Freak, and The Pokémon Company. This is a non-commercial fan project. Sprite images and data are fetched at runtime from [PokéAPI](https://pokeapi.co/) and are not redistributed in this repository.
 
+The title uses [Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P) by Cody "CodeMan38" Boisclair, licensed under the [SIL Open Font License 1.1](fonts/OFL.txt), self-hosted in `fonts/`.
+
 ---
 
 <div align="center"><pre>...BOREDOM BREEDS OVERENGINEERING...</pre></div>
