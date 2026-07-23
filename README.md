@@ -1,6 +1,6 @@
 # Pokédex
 
-**Boredom breeds overengineering.** Nobody needed another Pokédex. I was bored, made one anyway, then kept going until it had fuzzy search, offline support, and full keyboard access. All in vanilla JS.
+Nobody needed another Pokédex. I was bored, made one anyway, then kept going until it had fuzzy search, offline support, and full keyboard access. All in vanilla JS.
 
 [![Live demo](https://img.shields.io/badge/demo-live-e61515?style=flat-square)](https://pokedex.kanishk.live)
 [![CI](https://github.com/kanishk-upadhyay/pokedex/actions/workflows/ci.yml/badge.svg)](https://github.com/kanishk-upadhyay/pokedex/actions/workflows/ci.yml)
