@@ -4,7 +4,7 @@
   "description": "A fast, offline-capable Pok\u00e9dex PWA built in dependency-free vanilla JavaScript.",
   "type": "module",
   "private": true,
-  "license": "GPL-3.0-only",
+  "license": "GPL-3.0-or-later",
   "author": "Kanishk Upadhyay",
   "homepage": "https://pokedex.kanishk.live",
   "repository": {

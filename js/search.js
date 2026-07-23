@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /**
  * search.js — pure, stateless fuzzy-search helpers over the Pokémon name list.
  * No DOM and no app state: every function is deterministic and unit-testable
