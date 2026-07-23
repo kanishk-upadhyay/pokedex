@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /**
  * controller.js - Main application controller that coordinates between UI, API and data
  */

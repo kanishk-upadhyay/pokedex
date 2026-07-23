@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /**
  * index.js - Main entry point for the Pokédex application
  *

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
   Service Worker for Pokédex.
   Per-resource caching, each in its own bucket:

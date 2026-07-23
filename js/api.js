@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /**
  * api.js - Consolidated API, caching, and configuration module
  *
