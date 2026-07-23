@@ -202,6 +202,28 @@ class UIController {
         }
       }
 
+      // Typing a letter anywhere in the open dex (not already in the search
+      // box, no modifier held, help overlay not open) jumps focus to the
+      // search bar and starts a fresh query with that character — search
+      // without ever touching the mouse.
+      if (
+        this.isPokedexOpen() &&
+        !this.elements.shortcutsOverlay?.classList.contains("active") &&
+        /^[a-zA-Z]$/.test(ev.key) &&
+        !ev.ctrlKey && !ev.metaKey && !ev.altKey &&
+        this.elements.searchInput &&
+        document.activeElement !== this.elements.searchInput
+      ) {
+        ev.preventDefault();
+        this.elements.searchInput.value = ev.key;
+        // Programmatic-focus flag stops the focus listener below from
+        // clearing the character we just set.
+        this.programmaticallyFocused = true;
+        this.elements.searchInput.focus();
+        this.elements.searchInput.setSelectionRange(1, 1);
+        return;
+      }
+
       // Space: open the Pokédex when closed, flip the sprite when open. Skip when
       // a button or input already owns Space (there it activates that element or
       // types a space).
@@ -870,9 +892,15 @@ class UIController {
           onSelect?.({ name: label });
         },
         onKeydown: (ev) => {
+          if (!["Enter", " ", "ArrowDown", "ArrowUp", "Escape"].includes(ev.key)) return;
+          ev.preventDefault();
+          ev.stopPropagation();
           if (ev.key === "Enter" || ev.key === " ") {
-            ev.preventDefault();
             onSelect?.({ name: label });
+          } else if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+            this._moveSuggestionFocus(ev.currentTarget, ev.key === "ArrowDown" ? 1 : -1);
+          } else {
+            this.elements.searchInput?.focus();
           }
         },
         "aria-label": label,
@@ -881,6 +909,36 @@ class UIController {
     );
 
     return el("li", { role: "option", class: "suggestion-item" }, btn);
+  }
+
+  /**
+   * Move roving focus between suggestion buttons. Wraps at both ends to match
+   * the D-pad's wrap-around navigation. Moving up from the first item returns
+   * focus to the search box instead of wrapping, so Up always leads back out.
+   */
+  _moveSuggestionFocus(current, delta) {
+    const list = current.closest(".suggestions-list");
+    if (!list) return;
+    const buttons = Array.from(list.querySelectorAll(".suggestion-button"));
+    const idx = buttons.indexOf(current);
+    if (idx === -1) return;
+
+    if (delta === -1 && idx === 0) {
+      this.elements.searchInput?.focus();
+      return;
+    }
+
+    const nextIdx = (idx + delta + buttons.length) % buttons.length;
+    buttons[nextIdx].focus();
+  }
+
+  /**
+   * Focus the first rendered suggestion, if any are currently shown. Used to
+   * bridge ArrowDown from the search box into the suggestion list.
+   */
+  focusFirstSuggestion() {
+    const first = this.elements.detailsArea?.querySelector(".suggestion-button");
+    first?.focus();
   }
 }
 

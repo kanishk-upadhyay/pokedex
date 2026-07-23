@@ -113,7 +113,12 @@ class PokedexController {
 
     // Don't handle arrow keys when search input is focused (for text editing)
     if (this.ui.elements.searchInput && document.activeElement === this.ui.elements.searchInput) {
-      if (key === "ArrowUp" || key === "ArrowDown" || key === "ArrowLeft" || key === "ArrowRight") {
+      if (key === "ArrowDown") {
+        // Bridge from the search box into the rendered suggestion list, if any.
+        this.ui.focusFirstSuggestion();
+        return;
+      }
+      if (key === "ArrowUp" || key === "ArrowLeft" || key === "ArrowRight") {
         return; // Let the browser handle arrow keys for text cursor movement
       }
     }
