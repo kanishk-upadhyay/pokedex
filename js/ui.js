@@ -245,6 +245,12 @@ class UIController {
         }
       }
 
+      // Suppress the browser's default arrow-key scroll when ArrowDown bridges
+      // from the search box into the suggestion list.
+      if (ev.key === "ArrowDown" && document.activeElement === this.elements.searchInput) {
+        ev.preventDefault();
+      }
+
       onKeyboardNavigation(ev.key);
     });
 
@@ -900,7 +906,7 @@ class UIController {
           } else if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
             this._moveSuggestionFocus(ev.currentTarget, ev.key === "ArrowDown" ? 1 : -1);
           } else {
-            this.elements.searchInput?.focus();
+            this.elements.searchInput?.focus({ preventScroll: true });
           }
         },
         "aria-label": label,
@@ -924,12 +930,12 @@ class UIController {
     if (idx === -1) return;
 
     if (delta === -1 && idx === 0) {
-      this.elements.searchInput?.focus();
+      this.elements.searchInput?.focus({ preventScroll: true });
       return;
     }
 
     const nextIdx = (idx + delta + buttons.length) % buttons.length;
-    buttons[nextIdx].focus();
+    buttons[nextIdx].focus({ preventScroll: true });
   }
 
   /**
@@ -938,7 +944,7 @@ class UIController {
    */
   focusFirstSuggestion() {
     const first = this.elements.detailsArea?.querySelector(".suggestion-button");
-    first?.focus();
+    first?.focus({ preventScroll: true });
   }
 }
 
