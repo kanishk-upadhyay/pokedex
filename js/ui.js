@@ -934,8 +934,11 @@ class UIController {
       return;
     }
 
+    // Unlike the search-box bridge (which only ever focuses the first,
+    // already-visible item), roving can move focus to items below the fold —
+    // let the browser scroll them into view as needed.
     const nextIdx = (idx + delta + buttons.length) % buttons.length;
-    buttons[nextIdx].focus({ preventScroll: true });
+    buttons[nextIdx].focus();
   }
 
   /**
