@@ -502,6 +502,9 @@ class PokedexController {
       this.ui.renderPaginatedSuggestions(allMatches, 10, (selectedItem) => {
         this.selectPokemonByName(selectedItem.name);
       }); // Show 10 at a time with selection callback
+      // Move focus onto the first result so arrow keys immediately rove the
+      // list, instead of leaving focus in the search box.
+      this.ui.focusFirstSuggestion();
     } else {
       this.ui.showNotice("Pokémon not found. Check spelling.");
       this.ui.blurSearchInput();
