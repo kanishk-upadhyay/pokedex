@@ -410,6 +410,15 @@ class UIController {
     }
   }
 
+  // Move focus off the search input once a search has resolved to a single
+  // result (or no result), so arrow keys immediately drive Pokédex ID
+  // navigation instead of being captured for text-cursor movement.
+  blurSearchInput() {
+    if (document.activeElement === this.elements.searchInput) {
+      this.elements.searchInput?.blur();
+    }
+  }
+
   /**
    * Show offline message to user
    */

@@ -466,12 +466,14 @@ class PokedexController {
       } else {
         this.ui.showNotice(`Pokémon #${id} out of range.`);
       }
+      this.ui.blurSearchInput();
       return;
     }
 
     const exactMatch = this.state.pokemonNameMap.get(query);
     if (exactMatch) {
       await this.fetchPokemonById(exactMatch, { ...options, keepScreen: true });
+      this.ui.blurSearchInput();
       return;
     }
 
@@ -489,6 +491,7 @@ class PokedexController {
       const singleMatchId = this.state.pokemonNameMap.get(allMatches[0]);
       if (singleMatchId) {
         await this.fetchPokemonById(singleMatchId, { keepScreen: true });
+        this.ui.blurSearchInput();
         return;
       }
     }
@@ -500,6 +503,7 @@ class PokedexController {
       }); // Show 10 at a time with selection callback
     } else {
       this.ui.showNotice("Pokémon not found. Check spelling.");
+      this.ui.blurSearchInput();
     }
   }
   
