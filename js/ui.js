@@ -336,14 +336,18 @@ class UIController {
     }
   }
 
-  // Remove any message-kind class so the details area is neutral again.
+  // Remove any message-kind class so the details area is neutral again, and
+  // reset scroll position — otherwise a new result reuses the previous
+  // result's scroll offset instead of opening at the top.
   _clearMessageState() {
-    this.elements.detailsArea?.classList.remove(
+    const area = this.elements.detailsArea;
+    area?.classList.remove(
       "details-error",
       "details-notice",
       "details-info",
       "details-loading",
     );
+    if (area) area.scrollTop = 0;
   }
 
   // Show a status message with a semantic kind. Colour + icon come from CSS;
