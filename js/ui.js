@@ -122,16 +122,7 @@ class UIController {
 
         if (!this.elements.searchInput) return;
 
-        // Start fresh if the field holds leftover letters, or if the last
-        // search just resolved (a completed numeric search is never edited
-        // further — the next digit always starts a new number, never
-        // appends to the old one). Note: activeElement can't be used as
-        // the "search just resolved" signal here — clicking any button
-        // moves DOM focus to that button before this handler runs.
-        const isFreshEntry =
-          this.state.searchJustResolved ||
-          /[a-zA-Z]/.test(this.elements.searchInput.value);
-        if (isFreshEntry) {
+        if (!this._isMidNumericEntry()) {
           this.elements.searchInput.value = "";
           this.state.searchJustResolved = false;
         }
@@ -429,6 +420,17 @@ class UIController {
   // set unconditionally (not just when a blur actually happens) since a
   // blue-button click steals focus to the button itself, so activeElement
   // can't be used as the "search just resolved" signal.
+  // True while the search box holds a numeric ID the user is still building
+  // digit by digit (as opposed to leftover letters, or a number from a
+  // search that already resolved) — the one case where a digit button
+  // should append rather than start a fresh entry.
+  _isMidNumericEntry() {
+    return (
+      !this.state.searchJustResolved &&
+      !/[a-zA-Z]/.test(this.elements.searchInput.value)
+    );
+  }
+
   blurSearchInput() {
     this.state.searchJustResolved = true;
     if (document.activeElement === this.elements.searchInput) {
@@ -502,11 +504,8 @@ class UIController {
         decoding: "async",
       });
 
-      // Shimmer skeleton shown until the sprite paints
-      const skeleton = el("div", { class: "sprite-skeleton" });
-      this.elements.mainScreen.appendChild(skeleton);
       this.elements.mainScreen.appendChild(imageEl);
-      this._wireSpriteLoadState(imageEl, skeleton, pokemon);
+      this._mountSpriteWithSkeleton(imageEl, pokemon);
 
       this.state.showingFront = true;
       imageEl.addEventListener("click", () =>
@@ -648,6 +647,23 @@ class UIController {
     };
   }
 
+  // Append `img` to the main screen with a skeleton shown until it loads —
+  // used for the initial sprite render.
+  _mountSpriteWithSkeleton(img, pokemon) {
+    const skeleton = el("div", { class: "sprite-skeleton" });
+    this.elements.mainScreen.appendChild(skeleton);
+    this._wireSpriteLoadState(img, skeleton, pokemon);
+  }
+
+  // Swap `img` to `newSrc` in place, showing a skeleton until the new sprite
+  // loads — used for the front/back flip.
+  _swapSpriteWithSkeleton(img, pokemon, newSrc) {
+    const skeleton = el("div", { class: "sprite-skeleton" });
+    img.insertAdjacentElement("beforebegin", skeleton);
+    this._wireSpriteLoadState(img, skeleton, pokemon);
+    img.src = spriteUrl(newSrc);
+  }
+
   /**
    * Handle clicking on a Pokemon sprite to toggle front/back view
    * @private
@@ -665,34 +681,27 @@ class UIController {
       this.state.spriteMessageElement = null;
     }
 
-    if (this.state.showingFront) {
-      if (pokemon.sprites.back_default) {
-        const skeleton = el("div", { class: "sprite-skeleton" });
-        img.insertAdjacentElement("beforebegin", skeleton);
-        this._wireSpriteLoadState(img, skeleton, pokemon);
-        img.src = spriteUrl(pokemon.sprites.back_default);
-        this.state.showingFront = false;
-      } else {
-        // Show message that back image is not available
-        const messageEl = el("div", { class: "loading" }, "Back image not available");
-        this.elements.mainScreen.appendChild(messageEl);
-        this.state.spriteMessageElement = messageEl;
+    if (this.state.showingFront && !pokemon.sprites.back_default) {
+      // Show message that back image is not available
+      const messageEl = el("div", { class: "loading" }, "Back image not available");
+      this.elements.mainScreen.appendChild(messageEl);
+      this.state.spriteMessageElement = messageEl;
 
-        this.state.spriteMessageTimeout = setTimeout(() => {
-          // Only restore if the same Pokémon is still being displayed
-          if (this.state.lastDisplayedId === pokemon.id && this.state.spriteMessageElement) {
-            this.state.spriteMessageElement.remove();
-            this.state.spriteMessageElement = null;
-          }
-        }, 1500);
-      }
-    } else {
-      const skeleton = el("div", { class: "sprite-skeleton" });
-      img.insertAdjacentElement("beforebegin", skeleton);
-      this._wireSpriteLoadState(img, skeleton, pokemon);
-      img.src = spriteUrl(pokemon.sprites.front_default);
-      this.state.showingFront = true;
+      this.state.spriteMessageTimeout = setTimeout(() => {
+        // Only restore if the same Pokémon is still being displayed
+        if (this.state.lastDisplayedId === pokemon.id && this.state.spriteMessageElement) {
+          this.state.spriteMessageElement.remove();
+          this.state.spriteMessageElement = null;
+        }
+      }, 1500);
+      return;
     }
+
+    const nextSrc = this.state.showingFront
+      ? pokemon.sprites.back_default
+      : pokemon.sprites.front_default;
+    this._swapSpriteWithSkeleton(img, pokemon, nextSrc);
+    this.state.showingFront = !this.state.showingFront;
   }
 
   _getPrimaryType(pokemon) {

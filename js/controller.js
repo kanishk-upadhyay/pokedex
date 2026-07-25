@@ -525,13 +525,18 @@ class PokedexController {
     return this._nameTokens;
   }
 
+  // Fetch (and discard) a sprite so the browser has it cached before it's
+  // actually displayed.
+  _warmImage(url) {
+    if (!url) return;
+    const warm = new Image();
+    warm.src = spriteUrl(url);
+  }
+
   // Warm the currently displayed Pokémon's back sprite in the background, so
   // the first flip (Space / sprite click) doesn't stall on a cold fetch.
   _warmBackSprite(pokemon) {
-    const back = pokemon?.sprites?.back_default;
-    if (!back) return;
-    const warm = new Image();
-    warm.src = spriteUrl(back);
+    this._warmImage(pokemon?.sprites?.back_default);
   }
 
   preloadAdjacentPokemon(currentId) {
@@ -570,13 +575,7 @@ class PokedexController {
       await Promise.allSettled(
         preloadIds.map((id) =>
           this.getPokemonData(id)
-            .then((data) => {
-              const front = data?.sprites?.front_default;
-              if (front) {
-                const warm = new Image();
-                warm.src = spriteUrl(front);
-              }
-            })
+            .then((data) => this._warmImage(data?.sprites?.front_default))
             .catch(() => {})
         )
       );
