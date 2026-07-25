@@ -900,12 +900,15 @@ class UIController {
 
   _normalizeItem(item) {
     if (item == null) return null;
-    if (typeof item === "object") return { name: String(item.name ?? item.label ?? "") };
-    return { name: String(item) };
+    if (typeof item === "object") {
+      return { name: String(item.name ?? item.label ?? ""), id: item.id ?? null };
+    }
+    return { name: String(item), id: null };
   }
 
   _createSuggestionItem(item, onSelect) {
     const label = item.name || "";
+    const dex = Number.isFinite(item.id) ? `N°${String(item.id).padStart(3, "0")}` : "";
     const btn = el(
       "button",
       {
@@ -927,9 +930,10 @@ class UIController {
             this.elements.searchInput?.focus({ preventScroll: true });
           }
         },
-        "aria-label": label,
+        "aria-label": dex ? `${dex} ${label}` : label,
       },
-      label,
+      el("span", { class: "suggestion-dex", "aria-hidden": "true" }, dex),
+      el("span", { class: "suggestion-name" }, label),
     );
 
     return el("li", { role: "option", class: "suggestion-item" }, btn);
