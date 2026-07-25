@@ -33,6 +33,7 @@ class UIController {
       spriteMessageTimeout: null,
       spriteMessageElement: null,
       lastDisplayedId: null,
+      searchJustResolved: false,
     };
     this.programmaticallyFocused = false;
     this.initElements();
@@ -118,14 +119,23 @@ class UIController {
 
       const handleButtonInput = (e) => {
         e.preventDefault();
-        
+
         if (!this.elements.searchInput) return;
 
-        // If search input contains letters, clear it first
-        if (/[a-zA-Z]/.test(this.elements.searchInput.value)) {
+        // Start fresh if the field holds leftover letters, or if the last
+        // search just resolved (a completed numeric search is never edited
+        // further — the next digit always starts a new number, never
+        // appends to the old one). Note: activeElement can't be used as
+        // the "search just resolved" signal here — clicking any button
+        // moves DOM focus to that button before this handler runs.
+        const isFreshEntry =
+          this.state.searchJustResolved ||
+          /[a-zA-Z]/.test(this.elements.searchInput.value);
+        if (isFreshEntry) {
           this.elements.searchInput.value = "";
+          this.state.searchJustResolved = false;
         }
-        
+
         // Add the number to the search input
         this.elements.searchInput.value += String(n);
         
@@ -202,20 +212,21 @@ class UIController {
         }
       }
 
-      // Typing a letter anywhere in the open dex (not already in the search
-      // box, no modifier held, help overlay not open) jumps focus to the
-      // search bar and starts a fresh query with that character — search
+      // Typing a letter or digit anywhere in the open dex (not already in the
+      // search box, no modifier held, help overlay not open) jumps focus to
+      // the search bar and starts a fresh query with that character — search
       // without ever touching the mouse.
       if (
         this.isPokedexOpen() &&
         !this.elements.shortcutsOverlay?.classList.contains("active") &&
-        /^[a-zA-Z]$/.test(ev.key) &&
+        /^[a-zA-Z0-9]$/.test(ev.key) &&
         !ev.ctrlKey && !ev.metaKey && !ev.altKey &&
         this.elements.searchInput &&
         document.activeElement !== this.elements.searchInput
       ) {
         ev.preventDefault();
         this.elements.searchInput.value = ev.key;
+        this.state.searchJustResolved = false;
         // Programmatic-focus flag stops the focus listener below from
         // clearing the character we just set.
         this.programmaticallyFocused = true;
@@ -268,6 +279,7 @@ class UIController {
         // When user manually focuses with Pokémon displayed, clear the content immediately
         if (!this.programmaticallyFocused && this.state.lastDisplayedId) {
           e.target.value = '';  // Clear the search bar immediately on focus
+          this.state.searchJustResolved = false;
         }
         // Reset the programmatic flag after the event cycle
         setTimeout(() => {
@@ -412,8 +424,13 @@ class UIController {
 
   // Move focus off the search input once a search has resolved to a single
   // result (or no result), so arrow keys immediately drive Pokédex ID
-  // navigation instead of being captured for text-cursor movement.
+  // navigation instead of being captured for text-cursor movement. Also
+  // flags that the next digit entry should overwrite rather than append —
+  // set unconditionally (not just when a blur actually happens) since a
+  // blue-button click steals focus to the button itself, so activeElement
+  // can't be used as the "search just resolved" signal.
   blurSearchInput() {
+    this.state.searchJustResolved = true;
     if (document.activeElement === this.elements.searchInput) {
       this.elements.searchInput?.blur();
     }
@@ -489,18 +506,7 @@ class UIController {
       const skeleton = el("div", { class: "sprite-skeleton" });
       this.elements.mainScreen.appendChild(skeleton);
       this.elements.mainScreen.appendChild(imageEl);
-
-      imageEl.onload = () => {
-        if (this.state.lastDisplayedId === pokemon.id) skeleton.remove();
-      };
-
-      imageEl.onerror = (err) => {
-        console.error("Image failed to load:", pokemon.name, spriteUrl(pokemon.sprites.front_default), err);
-        if (this.state.lastDisplayedId === pokemon.id) {
-          skeleton.classList.add("failed");
-          skeleton.textContent = "Sprite unavailable";
-        }
-      };
+      this._wireSpriteLoadState(imageEl, skeleton, pokemon);
 
       this.state.showingFront = true;
       imageEl.addEventListener("click", () =>
@@ -626,6 +632,22 @@ class UIController {
     if (img) img.click();
   }
 
+  // Show a shimmer skeleton over `img` until its next load/error fires, then
+  // remove it (or mark it failed) — shared by the initial render and the
+  // front/back flip so both show the same loading feedback.
+  _wireSpriteLoadState(img, skeleton, pokemon) {
+    img.onload = () => {
+      if (this.state.lastDisplayedId === pokemon.id) skeleton.remove();
+    };
+    img.onerror = (err) => {
+      console.error("Image failed to load:", pokemon.name, img.src, err);
+      if (this.state.lastDisplayedId === pokemon.id) {
+        skeleton.classList.add("failed");
+        skeleton.textContent = "Sprite unavailable";
+      }
+    };
+  }
+
   /**
    * Handle clicking on a Pokemon sprite to toggle front/back view
    * @private
@@ -636,15 +658,18 @@ class UIController {
       clearTimeout(this.state.spriteMessageTimeout);
       this.state.spriteMessageTimeout = null;
     }
-    
+
     // Remove the previous "image not available" message, if any
     if (this.state.spriteMessageElement) {
       this.state.spriteMessageElement.remove();
       this.state.spriteMessageElement = null;
     }
-    
+
     if (this.state.showingFront) {
       if (pokemon.sprites.back_default) {
+        const skeleton = el("div", { class: "sprite-skeleton" });
+        img.insertAdjacentElement("beforebegin", skeleton);
+        this._wireSpriteLoadState(img, skeleton, pokemon);
         img.src = spriteUrl(pokemon.sprites.back_default);
         this.state.showingFront = false;
       } else {
@@ -662,6 +687,9 @@ class UIController {
         }, 1500);
       }
     } else {
+      const skeleton = el("div", { class: "sprite-skeleton" });
+      img.insertAdjacentElement("beforebegin", skeleton);
+      this._wireSpriteLoadState(img, skeleton, pokemon);
       img.src = spriteUrl(pokemon.sprites.front_default);
       this.state.showingFront = true;
     }

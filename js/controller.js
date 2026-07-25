@@ -332,6 +332,7 @@ class PokedexController {
       this.ui.setSearchValue(base.name);
       await this.ui.displayPokemon(base);
       StorageHelper.saveRaw("pokedex_last_id", base.id);
+      this._warmBackSprite(base);
 
       // ...then fetch species + evolution and patch the details panel in,
       // as long as the user has not navigated away in the meantime.
@@ -522,6 +523,15 @@ class PokedexController {
       this._nameTokensFor = allNames;
     }
     return this._nameTokens;
+  }
+
+  // Warm the currently displayed Pokémon's back sprite in the background, so
+  // the first flip (Space / sprite click) doesn't stall on a cold fetch.
+  _warmBackSprite(pokemon) {
+    const back = pokemon?.sprites?.back_default;
+    if (!back) return;
+    const warm = new Image();
+    warm.src = spriteUrl(back);
   }
 
   preloadAdjacentPokemon(currentId) {
