@@ -775,8 +775,10 @@ class UIController {
   }
 
   /**
-   * Renders paginated search suggestions with dynamic sizing and click handling
-   * Creates a responsive grid layout for suggestions on larger screens
+   * Renders paginated search suggestions, loading further pages automatically
+   * as the list is scrolled instead of behind a mouse-only "Load more" button
+   * — keyboard/roving nav scrolls the list natively, so this keeps that path
+   * able to reach every match too.
    * @param {Array} allItems - Array of suggestion items to render
    * @param {number} pageSize - Number of items to show initially
    * @param {Function} onSelect - Callback function when a suggestion is clicked
@@ -784,100 +786,66 @@ class UIController {
    */
   renderPaginatedSuggestions(allItems = [], pageSize = 10, onSelect) {
     if (!this.elements.detailsArea || !Array.isArray(allItems) || allItems.length === 0) return null;
-    
+
     // Clear existing content
     this._clearMessageState();
     this.elements.detailsArea.innerHTML = "";
-    
+
     // Create container for suggestions
     const container = el("div", { class: "suggestions-container" });
-    
-    // Store state for pagination
-    const state = {
-      allItems,
-      pageSize,
-      loadedCount: 0
-    };
-    
-    // Initial display of first page
-    const initialItems = allItems.slice(0, pageSize);
+
+    const state = { loadedCount: 0 };
+
     const listEl = el("ul", {
       class: "suggestions-list",
       role: "listbox",
       "aria-label": "Search suggestions",
     });
 
-    const rendered = initialItems
-      .map(this._normalizeItem.bind(this))
-      .filter(Boolean)
-      .map((item) => this._createSuggestionItem(item, onSelect));
+    const sentinel = el("li", { class: "suggestions-sentinel", "aria-hidden": "true" });
 
-    if (rendered.length) {
+    const loadNextPage = () => {
+      const startIndex = state.loadedCount;
+      const itemsToLoad = allItems.slice(startIndex, startIndex + pageSize);
+      if (itemsToLoad.length === 0) return;
+
+      const rendered = itemsToLoad
+        .map(this._normalizeItem.bind(this))
+        .filter(Boolean)
+        .map((item) => this._createSuggestionItem(item, onSelect));
+
       const frag = document.createDocumentFragment();
-      rendered.forEach(r => frag.appendChild(r));
-      listEl.appendChild(frag);
-      state.loadedCount = initialItems.length;
-    }
-    
-    // Add "Load More" button if there are more items
+      rendered.forEach((r) => frag.appendChild(r));
+      listEl.insertBefore(frag, sentinel);
+      state.loadedCount = startIndex + itemsToLoad.length;
+
+      if (state.loadedCount >= allItems.length) {
+        observer.disconnect();
+        sentinel.remove();
+      }
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) loadNextPage();
+    }, { root: this.elements.detailsArea });
+
+    // Roving focus (see _moveSuggestionFocus) can reach the last loaded item
+    // without ever scrolling the off-screen sentinel into view, so it calls
+    // this directly rather than relying solely on the observer.
+    listEl.loadMoreSuggestions = loadNextPage;
+
+    listEl.appendChild(sentinel);
+    loadNextPage();
+
     if (allItems.length > pageSize) {
-      const loadMoreBtn = el("button", {
-        class: "load-more-button",
-        type: "button",
-        dataset: { page: "0" },
-        onClick: (ev) => {
-          ev.preventDefault();
-          this._handleLoadMore(allItems, pageSize, listEl, loadMoreBtn, state, onSelect);
-        }
-      }, `Load more (${allItems.length - pageSize} remaining)`);
-      
-      container.appendChild(listEl);
-      container.appendChild(loadMoreBtn);
+      observer.observe(sentinel);
     } else {
-      container.appendChild(listEl);
+      sentinel.remove();
     }
-    
+
+    container.appendChild(listEl);
     this.elements.detailsArea.appendChild(container);
     return container;
-  }
-  
-  _handleLoadMore(allItems, pageSize, listEl, loadMoreBtn, state, onSelect) {
-    // Disable button during loading to prevent duplicate clicks
-    loadMoreBtn.disabled = true;
-    loadMoreBtn.textContent = 'Loading...';
-    
-    // Calculate what to load
-    const startIndex = state.loadedCount; // Use loadedCount instead of page-based calculation
-    const endIndex = Math.min(startIndex + pageSize, allItems.length);
-    const itemsToLoad = allItems.slice(startIndex, endIndex);
-    
-    if (itemsToLoad.length === 0) {
-      loadMoreBtn.remove(); // Remove button if no more items
-      return;
-    }
-    
-    const rendered = itemsToLoad
-      .map(this._normalizeItem.bind(this))
-      .filter(Boolean)
-      .map((item) => this._createSuggestionItem(item, onSelect));
-    
-    if (rendered.length) {
-      const frag = document.createDocumentFragment();
-      rendered.forEach(r => frag.appendChild(r));
-      listEl.appendChild(frag);
-      
-      // Update loaded count
-      state.loadedCount = endIndex;
-    }
-    
-    // Update or remove the "Load More" button
-    const remaining = allItems.length - endIndex;
-    if (remaining <= 0) {
-      loadMoreBtn.remove(); // Remove button when no more items
-    } else {
-      loadMoreBtn.textContent = `Load more (${remaining} remaining)`;
-      loadMoreBtn.disabled = false; // Re-enable button
-    }
   }
 
   _normalizeItem(item) {
@@ -925,13 +893,21 @@ class UIController {
   _moveSuggestionFocus(current, delta) {
     const list = current.closest(".suggestions-list");
     if (!list) return;
-    const buttons = Array.from(list.querySelectorAll(".suggestion-button"));
+    let buttons = Array.from(list.querySelectorAll(".suggestion-button"));
     const idx = buttons.indexOf(current);
     if (idx === -1) return;
 
     if (delta === -1 && idx === 0) {
       this.elements.searchInput?.focus({ preventScroll: true });
       return;
+    }
+
+    // Reaching the last loaded item never scrolls the (off-screen, aria-hidden)
+    // sentinel into view, so the IntersectionObserver behind it never fires —
+    // load the next page directly instead of wrapping prematurely.
+    if (delta === 1 && idx === buttons.length - 1) {
+      list.loadMoreSuggestions?.();
+      buttons = Array.from(list.querySelectorAll(".suggestion-button"));
     }
 
     // Unlike the search-box bridge (which only ever focuses the first,
