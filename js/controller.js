@@ -426,6 +426,7 @@ class PokedexController {
   selectPokemonByName(name) {
     const id = this.state.pokemonNameMap.get(String(name).toLowerCase());
     if (!id) return;
+    this.ui.setSearchButtonLabel();
     this.ui.setSearchValue(name);
     this.fetchPokemonById(id, { keepScreen: true }).catch((err) => {
       if (err?.name !== "AbortError") {
@@ -450,6 +451,7 @@ class PokedexController {
   }
 
   async _performSearch(options = {}) {
+    this.ui.setSearchButtonLabel();
     const raw = this.ui.getSearchValue();
     if (!raw) {
       this.ui.showMessage("Enter a Pokémon name or number.");
@@ -503,9 +505,10 @@ class PokedexController {
         name,
         id: this.state.pokemonNameMap.get(name),
       }));
-      this.ui.renderPaginatedSuggestions(withIds, 10, (selectedItem) => {
+      this.ui.setSearchButtonLabel(allMatches.length);
+      this.ui.renderPaginatedSuggestions(withIds, withIds.length, (selectedItem) => {
         this.selectPokemonByName(selectedItem.name);
-      }); // Show 10 at a time with selection callback
+      });
       // Move focus onto the first result so arrow keys immediately rove the
       // list, instead of leaving focus in the search box.
       this.ui.focusFirstSuggestion();

@@ -413,6 +413,15 @@ class UIController {
     }
   }
 
+  // Shows the number of matches found in place of the static "Search" label
+  // once a fuzzy search resolves to a suggestions list. Called with no count
+  // to reset back to "Search" (e.g. before a new search runs).
+  setSearchButtonLabel(count) {
+    if (!this.elements.searchButton) return;
+    this.elements.searchButton.textContent =
+      count > 0 ? `${count} found` : "Search";
+  }
+
   // Move focus off the search input once a search has resolved to a single
   // result (or no result), so arrow keys immediately drive Pokédex ID
   // navigation instead of being captured for text-cursor movement. Also
