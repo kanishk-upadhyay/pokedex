@@ -955,9 +955,13 @@ class UIController {
           // Leaving the list entirely (click/tab into the search box, click
           // elsewhere, etc.) restores whatever was actually typed. Skip this
           // when focus is just moving to another suggestion button — roving
-          // keeps showing each item's own preview.
+          // keeps showing each item's own preview. Also skip when focus is
+          // being programmatically redirected (letter-jump / number-pad
+          // handlers already set the input's value themselves before
+          // calling .focus() — restoring here would clobber that).
           const next = ev.relatedTarget;
           if (next && next.classList?.contains("suggestion-button")) return;
+          if (this.programmaticallyFocused) return;
           this.setSearchValue(this.state.typedQuery);
         },
         onKeydown: (ev) => {
