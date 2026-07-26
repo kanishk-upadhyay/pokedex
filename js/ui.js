@@ -35,6 +35,7 @@ class UIController {
       lastDisplayedId: null,
       searchJustResolved: false,
       lastMatchCount: 0,
+      typedQuery: "",
     };
     this.programmaticallyFocused = false;
     this.initElements();
@@ -945,6 +946,11 @@ class UIController {
           ev.preventDefault();
           onSelect?.({ name: label });
         },
+        onFocus: () => {
+          // Preview the highlighted match in the search box as roving focus
+          // passes over it, so the typed text tracks the current selection.
+          this.setSearchValue(label);
+        },
         onKeydown: (ev) => {
           if (!["Enter", " ", "ArrowDown", "ArrowUp", "Escape"].includes(ev.key)) return;
           ev.preventDefault();
@@ -954,6 +960,7 @@ class UIController {
           } else if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
             this._moveSuggestionFocus(ev.currentTarget, ev.key === "ArrowDown" ? 1 : -1);
           } else {
+            this.setSearchValue(this.state.typedQuery);
             this.elements.searchInput?.focus({ preventScroll: true });
           }
         },
@@ -979,6 +986,7 @@ class UIController {
     if (idx === -1) return;
 
     if (delta === -1 && idx === 0) {
+      this.setSearchValue(this.state.typedQuery);
       this.elements.searchInput?.focus({ preventScroll: true });
       return;
     }
@@ -1004,7 +1012,11 @@ class UIController {
    */
   focusFirstSuggestion() {
     const first = this.elements.detailsArea?.querySelector(".suggestion-button");
-    first?.focus({ preventScroll: true });
+    if (!first) return;
+    // Remember what the user actually typed so it can be restored if they
+    // rove back out of the list without picking anything.
+    this.state.typedQuery = this.getSearchValue();
+    first.focus({ preventScroll: true });
   }
 }
 
