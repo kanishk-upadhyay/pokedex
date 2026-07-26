@@ -951,6 +951,15 @@ class UIController {
           // passes over it, so the typed text tracks the current selection.
           this.setSearchValue(label);
         },
+        onBlur: (ev) => {
+          // Leaving the list entirely (click/tab into the search box, click
+          // elsewhere, etc.) restores whatever was actually typed. Skip this
+          // when focus is just moving to another suggestion button — roving
+          // keeps showing each item's own preview.
+          const next = ev.relatedTarget;
+          if (next && next.classList?.contains("suggestion-button")) return;
+          this.setSearchValue(this.state.typedQuery);
+        },
         onKeydown: (ev) => {
           if (!["Enter", " ", "ArrowDown", "ArrowUp", "Escape"].includes(ev.key)) return;
           ev.preventDefault();
@@ -960,7 +969,6 @@ class UIController {
           } else if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
             this._moveSuggestionFocus(ev.currentTarget, ev.key === "ArrowDown" ? 1 : -1);
           } else {
-            this.setSearchValue(this.state.typedQuery);
             this.elements.searchInput?.focus({ preventScroll: true });
           }
         },
