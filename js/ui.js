@@ -34,6 +34,7 @@ class UIController {
       spriteMessageElement: null,
       lastDisplayedId: null,
       searchJustResolved: false,
+      lastMatchCount: 0,
     };
     this.programmaticallyFocused = false;
     this.initElements();
@@ -276,6 +277,16 @@ class UIController {
         setTimeout(() => {
           this.programmaticallyFocused = false;
         }, 10);
+        // While focused, the button always reads "Search" rather than a
+        // (possibly stale) match count from before this focus.
+        if (this.elements.searchButton) {
+          this.elements.searchButton.textContent = "Search";
+        }
+      });
+
+      // On blur, restore the match-count label if one is pending.
+      this.elements.searchInput.addEventListener("blur", () => {
+        this.setSearchButtonLabel(this.state.lastMatchCount);
       });
     }
     
@@ -415,11 +426,18 @@ class UIController {
 
   // Shows the number of matches found in place of the static "Search" label
   // once a fuzzy search resolves to a suggestions list. Called with no count
-  // to reset back to "Search" (e.g. before a new search runs).
+  // to reset back to "Search" (e.g. before a new search runs). Suppressed
+  // while the search input has focus, so the label reads "Search" (not a
+  // stale count) whenever the user is actively typing.
   setSearchButtonLabel(count) {
     if (!this.elements.searchButton) return;
+    this.state.lastMatchCount = count || 0;
+    if (document.activeElement === this.elements.searchInput) {
+      this.elements.searchButton.textContent = "Search";
+      return;
+    }
     this.elements.searchButton.textContent =
-      count > 0 ? `${count} found` : "Search";
+      this.state.lastMatchCount > 0 ? `${this.state.lastMatchCount} found` : "Search";
   }
 
   // Move focus off the search input once a search has resolved to a single
