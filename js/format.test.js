@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { formatPokemonName, formatDexNumber } from "./format.js";
+import { formatPokemonName, formatDexNumber, formatSlugName } from "./format.js";
 
 test("formatPokemonName: plain name is title-cased", () => {
   assert.equal(formatPokemonName("pikachu"), "Pikachu");
@@ -45,4 +45,16 @@ test("formatDexNumber: pads to 3 digits with N° prefix", () => {
 test("formatDexNumber: non-finite input returns empty string", () => {
   assert.equal(formatDexNumber(NaN), "");
   assert.equal(formatDexNumber(undefined), "");
+});
+
+test("formatSlugName: hyphenated slug becomes space-separated title case", () => {
+  assert.equal(formatSlugName("swift-swim"), "Swift Swim");
+  assert.equal(formatSlugName("sand-attack"), "Sand Attack");
+  assert.equal(formatSlugName("shell-armor"), "Shell Armor");
+});
+
+test("formatSlugName: empty or non-string input returns empty string", () => {
+  assert.equal(formatSlugName(""), "");
+  assert.equal(formatSlugName(undefined), "");
+  assert.equal(formatSlugName(null), "");
 });

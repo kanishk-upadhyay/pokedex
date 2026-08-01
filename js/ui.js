@@ -23,7 +23,7 @@
 
 import { el, img } from "./dom.js";
 import { spriteUrl } from "./api.js";
-import { formatPokemonName, formatDexNumber } from "./format.js";
+import { formatPokemonName, formatDexNumber, formatSlugName } from "./format.js";
 
 class UIController {
   constructor() {
@@ -768,12 +768,14 @@ class UIController {
   _getMovesString(pokemon) {
     return (pokemon.moves || [])
       .slice(0, 4)
-      .map((m) => m.move.name)
+      .map((m) => formatSlugName(m.move.name))
       .join(", ");
   }
 
   _getAbilitiesString(pokemon) {
-    return (pokemon.abilities || []).map((a) => a.ability.name).join(", ");
+    return (pokemon.abilities || [])
+      .map((a) => formatSlugName(a.ability.name))
+      .join(", ");
   }
 
   _getPokedexEntry(pokemon) {
@@ -781,7 +783,10 @@ class UIController {
       const english = (pokemon.speciesData.flavor_text_entries || []).find(
         (e) => e.language?.name === "en",
       );
-      if (english) return english.flavor_text.replace(/\f/g, " ");
+      if (english)
+        return english.flavor_text
+          .replace(/\f/g, " ")
+          .replace(/POK[ée]MON/gi, "Pokémon");
       return "No Pokédex entry available.";
     }
     // Species data has not been fetched yet (progressive render). Show a

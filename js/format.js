@@ -67,3 +67,14 @@ export function formatPokemonName(name) {
 export function formatDexNumber(id) {
   return Number.isFinite(id) ? `N°${String(id).padStart(3, "0")}` : "";
 }
+
+// Formats an ability/move API slug ("swift-swim") as space-separated title
+// case ("Swift Swim") — unlike species names, every hyphen here is just a
+// word separator, so no base/suffix splitting is needed.
+export function formatSlugName(slug) {
+  if (!slug || typeof slug !== "string") return "";
+  return slug
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
