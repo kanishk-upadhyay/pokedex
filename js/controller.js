@@ -74,6 +74,15 @@ class PokedexController {
   }
 
   /**
+   * Swallows AbortError silently; otherwise logs and optionally shows a UI message.
+   */
+  _reportError(err, { logPrefix, uiMessage } = {}) {
+    if (isAbort(err)) return;
+    console.error(logPrefix, err);
+    if (uiMessage) this.ui.showError(uiMessage);
+  }
+
+  /**
    * Register service worker for offline capability
    */
   registerServiceWorker() {
@@ -261,9 +270,7 @@ class PokedexController {
     try {
       await this.progressivelyLoadPokemonList();
     } catch (err) {
-      if (!isAbort(err)) {
-        console.error("Could not load the Pokédex list:", err);
-      }
+      this._reportError(err, { logPrefix: "Could not load the Pokédex list:" });
     }
   }
 
@@ -313,9 +320,7 @@ class PokedexController {
       // Both callers of this method already want to fail silently (one via
       // .catch(() => {}), the other via its own try/catch) - don't surface
       // an error banner here, just log it.
-      if (!isAbort(err)) {
-        console.error("Error loading pokemon list progressively:", err);
-      }
+      this._reportError(err, { logPrefix: "Error loading pokemon list progressively:" });
       // State remains unchanged if error occurs during loading
     }
     // If the pokedex was opened while the list was still loading and nothing
@@ -407,8 +412,7 @@ class PokedexController {
       this.state.pokemonNameMap.set(nameLower, data.id);
       return data;
     } catch (err) {
-      if (isAbort(err)) throw err;
-      console.error(`Error fetching Pokemon data for ${idOrName}:`, err);
+      this._reportError(err, { logPrefix: `Error fetching Pokemon data for ${idOrName}:` });
       throw err;
     }
   }
@@ -436,9 +440,10 @@ class PokedexController {
     this.ui.setSearchButtonLabel();
     this.ui.setSearchValue(name);
     this.fetchPokemonById(id, { keepScreen: true }).catch((err) => {
-      if (!isAbort(err)) {
-        this.ui.showError(`Error loading ${name}.`);
-      }
+      this._reportError(err, {
+        logPrefix: `Error loading ${name}:`,
+        uiMessage: `Error loading ${name}.`,
+      });
     });
   }
 
