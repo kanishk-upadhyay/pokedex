@@ -611,7 +611,7 @@ class UIController {
     const typesEl = el(
       "p",
       { class: "pokemon-types" },
-      el("strong", {}, "Type: "),
+      el("span", { class: "detail-eyebrow" }, "Type"),
       ...typeChips,
     );
 

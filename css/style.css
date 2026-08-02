@@ -314,6 +314,11 @@ body {
     text-transform: capitalize;
 }
 
+.pokemon-types .detail-eyebrow {
+    display: inline;
+    margin-right: 0.4em;
+}
+
 .pokemon-abilities,
 .pokemon-moves,
 .pokemon-evolutions {
