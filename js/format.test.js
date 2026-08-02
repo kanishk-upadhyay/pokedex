@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { formatPokemonName } from "./format.js";
+import { formatPokemonName, formatDexNumber } from "./format.js";
 
 test("formatPokemonName: plain name is title-cased", () => {
   assert.equal(formatPokemonName("pikachu"), "Pikachu");
@@ -34,4 +34,15 @@ test("formatPokemonName: species with a hyphenated base name is not split as a f
 test("formatPokemonName: hyphenated-base species still splits a real form suffix", () => {
   assert.equal(formatPokemonName("mr-mime-galar"), "Mr-Mime (Galar)");
   assert.equal(formatPokemonName("tapu-koko-totem"), "Tapu-Koko (Totem)");
+});
+
+test("formatDexNumber: pads to 3 digits with N° prefix", () => {
+  assert.equal(formatDexNumber(25), "N°025");
+  assert.equal(formatDexNumber(1), "N°001");
+  assert.equal(formatDexNumber(150), "N°150");
+});
+
+test("formatDexNumber: non-finite input returns empty string", () => {
+  assert.equal(formatDexNumber(NaN), "");
+  assert.equal(formatDexNumber(undefined), "");
 });

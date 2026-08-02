@@ -63,3 +63,7 @@ export function formatPokemonName(name) {
 
   return `${base} (${suffix})`;
 }
+
+export function formatDexNumber(id) {
+  return Number.isFinite(id) ? `N°${String(id).padStart(3, "0")}` : "";
+}

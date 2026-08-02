@@ -23,7 +23,7 @@
 
 import { el, img } from "./dom.js";
 import { spriteUrl } from "./api.js";
-import { formatPokemonName } from "./format.js";
+import { formatPokemonName, formatDexNumber } from "./format.js";
 
 class UIController {
   constructor() {
@@ -115,11 +115,9 @@ class UIController {
     const frag = document.createDocumentFragment();
 
     [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].forEach((n) => {
-      const btn = document.createElement("button");
-      btn.className = "blue-button";
-      btn.dataset.value = String(n);
-      btn.setAttribute("aria-label", `Enter ${n}`);
-
+      // Use only click event - it handles both mouse clicks and touch interactions properly
+      // On touch devices, the click event fires after touchend, and modern browsers
+      // handle the 300ms delay and duplicates properly
       const handleButtonInput = (e) => {
         e.preventDefault();
 
@@ -132,18 +130,20 @@ class UIController {
 
         // Add the number to the search input
         this.elements.searchInput.value += String(n);
-        
+
         // Set the flag to indicate this focus is programmatically triggered
         this.programmaticallyFocused = true;
         this.elements.searchInput.focus();
       };
-      
-      // Use only click event - it handles both mouse clicks and touch interactions properly
-      // On touch devices, the click event fires after touchend, and modern browsers
-      // handle the 300ms delay and duplicates properly
-      btn.addEventListener("click", handleButtonInput);
-      
-      frag.appendChild(btn);
+
+      frag.appendChild(
+        el("button", {
+          class: "blue-button",
+          dataset: { value: String(n) },
+          "aria-label": `Enter ${n}`,
+          onClick: handleButtonInput,
+        }),
+      );
     });
     grid.appendChild(frag);
   }
@@ -572,9 +572,7 @@ class UIController {
     // species (e.g. Mega Charizard X lives on /pokedex/charizard), so use the
     // species name rather than the form name to avoid 404s.
     const speciesName = pokemon.species?.name || pokemon.name;
-    const dexNumber = Number.isFinite(pokemon.id)
-      ? ` - N°${String(pokemon.id).padStart(3, "0")}`
-      : "";
+    const dexNumber = pokemon.id != null ? ` - ${formatDexNumber(pokemon.id)}` : "";
     const nameEl = el(
       "h3",
       { class: "pokemon-name" },
@@ -913,7 +911,7 @@ class UIController {
   _createSuggestionItem(item, onSelect) {
     const rawName = item.name || "";
     const label = formatPokemonName(rawName);
-    const dex = Number.isFinite(item.id) ? `N°${String(item.id).padStart(3, "0")}` : "";
+    const dex = formatDexNumber(item.id);
     const btn = el(
       "button",
       {
