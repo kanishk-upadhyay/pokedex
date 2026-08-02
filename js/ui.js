@@ -23,6 +23,7 @@
 
 import { el, img } from "./dom.js";
 import { spriteUrl } from "./api.js";
+import { formatPokemonName, formatDexNumber, formatSlugName } from "./format.js";
 
 class UIController {
   constructor() {
@@ -114,11 +115,9 @@ class UIController {
     const frag = document.createDocumentFragment();
 
     [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].forEach((n) => {
-      const btn = document.createElement("button");
-      btn.className = "blue-button";
-      btn.dataset.value = String(n);
-      btn.setAttribute("aria-label", `Enter ${n}`);
-
+      // Use only click event - it handles both mouse clicks and touch interactions properly
+      // On touch devices, the click event fires after touchend, and modern browsers
+      // handle the 300ms delay and duplicates properly
       const handleButtonInput = (e) => {
         e.preventDefault();
 
@@ -131,18 +130,20 @@ class UIController {
 
         // Add the number to the search input
         this.elements.searchInput.value += String(n);
-        
+
         // Set the flag to indicate this focus is programmatically triggered
         this.programmaticallyFocused = true;
         this.elements.searchInput.focus();
       };
-      
-      // Use only click event - it handles both mouse clicks and touch interactions properly
-      // On touch devices, the click event fires after touchend, and modern browsers
-      // handle the 300ms delay and duplicates properly
-      btn.addEventListener("click", handleButtonInput);
-      
-      frag.appendChild(btn);
+
+      frag.appendChild(
+        el("button", {
+          class: "blue-button",
+          dataset: { value: String(n) },
+          "aria-label": `Enter ${n}`,
+          onClick: handleButtonInput,
+        }),
+      );
     });
     grid.appendChild(frag);
   }
@@ -370,8 +371,12 @@ class UIController {
   //   notice  -> user-input issue, e.g. not found / out of range (amber)
   //   info    -> prompt / neutral guidance (cyan)
   //   loading -> in progress (green)
-  _setDetailsMessage(message, kind) {
-    this.state.lastDisplayedId = null;
+  _setDetailsMessage(message, kind, { keepScreen = false } = {}) {
+    // Only invalidate the "already showing this Pokémon" guard when the
+    // main screen is actually being replaced - a keepScreen loading message
+    // (e.g. while searching) shouldn't defeat displayPokemon's redundant-
+    // render check for the Pokémon still on screen.
+    if (!keepScreen) this.state.lastDisplayedId = null;
     const area = this.elements.detailsArea;
     if (!area) return;
     this._clearMessageState();
@@ -380,7 +385,7 @@ class UIController {
   }
 
   showLoading(message = "Loading...", { keepScreen = false } = {}) {
-    this._setDetailsMessage(message, "loading");
+    this._setDetailsMessage(message, "loading", { keepScreen });
     // Search keeps the current sprite visible: the left screen is not used to
     // show search results, so only blank it for a full Pokémon load.
     if (!keepScreen && this.elements.mainScreen) {
@@ -516,32 +521,34 @@ class UIController {
       return;
     }
 
-    if (this.state.lastDisplayedId === pokemon.id) {
-      return;
-    }
+    // Skip the (flicker-prone) sprite remount when it's already showing this
+    // Pokémon, but always re-render the details panel below: a keepScreen
+    // search (e.g. re-searching the currently displayed Pokémon) overwrites
+    // it with a transient "Searching..." message that only this call clears.
+    if (this.state.lastDisplayedId !== pokemon.id) {
+      this.state.lastDisplayedId = pokemon.id;
+      this.elements.mainScreen.innerHTML = "";
 
-    this.state.lastDisplayedId = pokemon.id;
-    this.elements.mainScreen.innerHTML = "";
+      if (pokemon.sprites?.front_default) {
+        const imageEl = img(spriteUrl(pokemon.sprites.front_default), {
+          class: "pokemon-image fullscreen",
+          alt: pokemon.name || "",
+          loading: "eager",
+          decoding: "async",
+        });
 
-    if (pokemon.sprites?.front_default) {
-      const imageEl = img(spriteUrl(pokemon.sprites.front_default), {
-        class: "pokemon-image fullscreen",
-        alt: pokemon.name || "",
-        loading: "eager",
-        decoding: "async",
-      });
+        this.elements.mainScreen.appendChild(imageEl);
+        this._mountSpriteWithSkeleton(imageEl, pokemon);
 
-      this.elements.mainScreen.appendChild(imageEl);
-      this._mountSpriteWithSkeleton(imageEl, pokemon);
-
-      this.state.showingFront = true;
-      imageEl.addEventListener("click", () =>
-        this._handleSpriteClick(pokemon, imageEl),
-      );
-    } else {
-      this.elements.mainScreen.appendChild(
-        el("div", { class: "loading" }, "Image not available"),
-      );
+        this.state.showingFront = true;
+        imageEl.addEventListener("click", () =>
+          this._handleSpriteClick(pokemon, imageEl),
+        );
+      } else {
+        this.elements.mainScreen.appendChild(
+          el("div", { class: "loading" }, "Image not available"),
+        );
+      }
     }
 
     this._renderDetails(pokemon);
@@ -567,6 +574,7 @@ class UIController {
     // species (e.g. Mega Charizard X lives on /pokedex/charizard), so use the
     // species name rather than the form name to avoid 404s.
     const speciesName = pokemon.species?.name || pokemon.name;
+    const dexNumber = formatDexNumber(pokemon.id);
     const nameEl = el(
       "h3",
       { class: "pokemon-name" },
@@ -579,9 +587,9 @@ class UIController {
           rel: "noopener noreferrer",
           title: `View ${pokemon.name} on PokémonDB`,
         },
-        pokemon.name,
+        formatPokemonName(pokemon.name),
       ),
-      el("span", { class: "pokemon-id" }, ` - ${pokemon.id}`),
+      el("span", { class: "pokemon-id" }, dexNumber),
     );
 
     // Colour the name with the primary type. For dual-type Pokémon, add a hard
@@ -602,7 +610,12 @@ class UIController {
     const typeChips = (pokemon.types || []).map((t) =>
       el("span", { class: `type-chip ${t.type.name}` }, t.type.name),
     );
-    const typesEl = el("p", { class: "pokemon-types" }, el("strong", {}, "Type: "), ...typeChips);
+    const typesEl = el(
+      "p",
+      { class: "pokemon-types" },
+      el("span", { class: "detail-eyebrow" }, "Type"),
+      ...typeChips,
+    );
 
     const entryEl = el(
       "p",
@@ -611,17 +624,17 @@ class UIController {
     );
 
     const abilitiesEl = el(
-      "p",
+      "div",
       { class: "pokemon-abilities" },
-      el("strong", {}, "Abilities: "),
-      this._getAbilitiesString(pokemon),
+      el("span", { class: "detail-eyebrow" }, "Abilities"),
+      el("div", { class: "detail-value" }, this._getAbilitiesString(pokemon)),
     );
 
     const movesEl = el(
-      "p",
+      "div",
       { class: "pokemon-moves" },
-      el("strong", {}, "Moves: "),
-      this._getMovesString(pokemon),
+      el("span", { class: "detail-eyebrow" }, "Moves"),
+      el("div", { class: "detail-value" }, this._getMovesString(pokemon)),
     );
     const container = el(
       "div",
@@ -636,9 +649,9 @@ class UIController {
     const evolutionChain = this._buildEvolutionChain(pokemon);
     if (evolutionChain.length > 1) {
       const evolutionsEl = el(
-        "p",
-        { class: "pokemon-evolutions" },  // Remove the color class from parent
-        el("strong", {}, "Evolutions: "),
+        "div",
+        { class: "pokemon-evolutions" },
+        el("span", { class: "detail-eyebrow" }, "Evolutions"),
       );
 
       evolutionChain.forEach((node) => evolutionsEl.appendChild(node));
@@ -662,10 +675,18 @@ class UIController {
   // remove it (or mark it failed) — shared by the initial render and the
   // front/back flip so both show the same loading feedback.
   _wireSpriteLoadState(img, skeleton, pokemon) {
+    // A rapid second flip can wire a new skeleton before the previous one's
+    // load/error fires, overwriting img.onload/onerror; without this the
+    // earlier skeleton is orphaned and never removed from the DOM.
+    img.__pendingSkeleton?.remove();
+    img.__pendingSkeleton = skeleton;
+
     img.onload = () => {
+      if (img.__pendingSkeleton === skeleton) img.__pendingSkeleton = null;
       if (this.state.lastDisplayedId === pokemon.id) skeleton.remove();
     };
     img.onerror = (err) => {
+      if (img.__pendingSkeleton === skeleton) img.__pendingSkeleton = null;
       console.error("Image failed to load:", pokemon.name, img.src, err);
       if (this.state.lastDisplayedId === pokemon.id) {
         skeleton.classList.add("failed");
@@ -749,12 +770,14 @@ class UIController {
   _getMovesString(pokemon) {
     return (pokemon.moves || [])
       .slice(0, 4)
-      .map((m) => m.move.name)
+      .map((m) => formatSlugName(m.move.name))
       .join(", ");
   }
 
   _getAbilitiesString(pokemon) {
-    return (pokemon.abilities || []).map((a) => a.ability.name).join(", ");
+    return (pokemon.abilities || [])
+      .map((a) => formatSlugName(a.ability.name))
+      .join(", ");
   }
 
   _getPokedexEntry(pokemon) {
@@ -762,7 +785,10 @@ class UIController {
       const english = (pokemon.speciesData.flavor_text_entries || []).find(
         (e) => e.language?.name === "en",
       );
-      if (english) return english.flavor_text.replace(/\f/g, " ");
+      if (english)
+        return english.flavor_text
+          .replace(/\f/g, " ")
+          .replace(/POK[ée]MON/gi, "Pokémon");
       return "No Pokédex entry available.";
     }
     // Species data has not been fetched yet (progressive render). Show a
@@ -852,73 +878,29 @@ class UIController {
   }
 
   /**
-   * Renders paginated search suggestions, loading further pages automatically
-   * as the list is scrolled instead of behind a mouse-only "Load more" button
-   * — keyboard/roving nav scrolls the list natively, so this keeps that path
-   * able to reach every match too.
+   * Renders search suggestions as a list of clickable buttons.
    * @param {Array} allItems - Array of suggestion items to render
-   * @param {number} pageSize - Number of items to show initially
    * @param {Function} onSelect - Callback function when a suggestion is clicked
    * @returns {Element|null} - The container element or null if no items
    */
-  renderPaginatedSuggestions(allItems = [], pageSize = 10, onSelect) {
+  renderSuggestions(allItems = [], onSelect) {
     if (!this.elements.detailsArea || !Array.isArray(allItems) || allItems.length === 0) return null;
 
-    // Clear existing content
     this._clearMessageState();
     this.elements.detailsArea.innerHTML = "";
 
-    // Create container for suggestions
     const container = el("div", { class: "suggestions-container" });
-
-    const state = { loadedCount: 0 };
-
     const listEl = el("ul", {
       class: "suggestions-list",
       role: "listbox",
       "aria-label": "Search suggestions",
     });
 
-    const sentinel = el("li", { class: "suggestions-sentinel", "aria-hidden": "true" });
-
-    const loadNextPage = () => {
-      const startIndex = state.loadedCount;
-      const itemsToLoad = allItems.slice(startIndex, startIndex + pageSize);
-      if (itemsToLoad.length === 0) return;
-
-      const rendered = itemsToLoad
-        .map(this._normalizeItem.bind(this))
-        .filter(Boolean)
-        .map((item) => this._createSuggestionItem(item, onSelect));
-
-      const frag = document.createDocumentFragment();
-      rendered.forEach((r) => frag.appendChild(r));
-      listEl.insertBefore(frag, sentinel);
-      state.loadedCount = startIndex + itemsToLoad.length;
-
-      if (state.loadedCount >= allItems.length) {
-        observer.disconnect();
-        sentinel.remove();
-      }
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) loadNextPage();
-    }, { root: this.elements.detailsArea });
-
-    // Roving focus (see _moveSuggestionFocus) can reach the last loaded item
-    // without ever scrolling the off-screen sentinel into view, so it calls
-    // this directly rather than relying solely on the observer.
-    listEl.loadMoreSuggestions = loadNextPage;
-
-    listEl.appendChild(sentinel);
-    loadNextPage();
-
-    if (allItems.length > pageSize) {
-      observer.observe(sentinel);
-    } else {
-      sentinel.remove();
-    }
+    allItems
+      .map(this._normalizeItem.bind(this))
+      .filter(Boolean)
+      .map((item) => this._createSuggestionItem(item, onSelect))
+      .forEach((r) => listEl.appendChild(r));
 
     container.appendChild(listEl);
     this.elements.detailsArea.appendChild(container);
@@ -934,8 +916,9 @@ class UIController {
   }
 
   _createSuggestionItem(item, onSelect) {
-    const label = item.name || "";
-    const dex = Number.isFinite(item.id) ? `N°${String(item.id).padStart(3, "0")}` : "";
+    const rawName = item.name || "";
+    const label = formatPokemonName(rawName);
+    const dex = formatDexNumber(item.id);
     const btn = el(
       "button",
       {
@@ -943,7 +926,7 @@ class UIController {
         class: "suggestion-button",
         onClick: (ev) => {
           ev.preventDefault();
-          onSelect?.({ name: label });
+          onSelect?.({ name: rawName });
         },
         onFocus: () => {
           // Preview the highlighted match in the search box as roving focus
@@ -963,7 +946,7 @@ class UIController {
           ev.preventDefault();
           ev.stopPropagation();
           if (ev.key === "Enter" || ev.key === " ") {
-            onSelect?.({ name: label });
+            onSelect?.({ name: rawName });
           } else if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
             this._moveSuggestionFocus(ev.currentTarget, ev.key === "ArrowDown" ? 1 : -1);
           } else {
@@ -987,7 +970,7 @@ class UIController {
   _moveSuggestionFocus(current, delta) {
     const list = current.closest(".suggestions-list");
     if (!list) return;
-    let buttons = Array.from(list.querySelectorAll(".suggestion-button"));
+    const buttons = Array.from(list.querySelectorAll(".suggestion-button"));
     const idx = buttons.indexOf(current);
     if (idx === -1) return;
 
@@ -995,14 +978,6 @@ class UIController {
       this.setSearchValue(this.state.typedQuery);
       this.elements.searchInput?.focus({ preventScroll: true });
       return;
-    }
-
-    // Reaching the last loaded item never scrolls the (off-screen, aria-hidden)
-    // sentinel into view, so the IntersectionObserver behind it never fires —
-    // load the next page directly instead of wrapping prematurely.
-    if (delta === 1 && idx === buttons.length - 1) {
-      list.loadMoreSuggestions?.();
-      buttons = Array.from(list.querySelectorAll(".suggestion-button"));
     }
 
     // Unlike the search-box bridge (which only ever focuses the first,

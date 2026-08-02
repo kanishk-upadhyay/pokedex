@@ -4,7 +4,7 @@
  */
 
 import { UIController } from "./ui.js";
-import { PokemonAPI, Cache, StorageHelper, spriteUrl, SEARCH_DEBOUNCE_MS, PRELOAD_MAX_ADJACENT, NAME_LIST_KEY, NAME_LIST_TTL } from "./api.js";
+import { PokemonAPI, Cache, StorageHelper, spriteUrl, isAbort, SEARCH_DEBOUNCE_MS, PRELOAD_MAX_ADJACENT, NAME_LIST_KEY, NAME_LIST_TTL, LAST_ID_KEY } from "./api.js";
 import { fuzzySearch, tokenizeNames } from "./search.js";
 
 const DEFAULT_POKEMON_ID = 1;
@@ -40,6 +40,7 @@ class PokedexController {
       initialShown: false,
       searchTimeout: null,
       searchAbortController: null,
+      requestGeneration: 0,
     };
 
     this.api = new PokemonAPI();
@@ -70,6 +71,19 @@ class PokedexController {
       // Load pokemon list for search functionality
       await this.loadPokemonList();
     });
+  }
+
+  /**
+   * Swallows AbortError silently; otherwise logs and optionally shows a UI message.
+   */
+  _reportError(err, { logPrefix, uiMessage } = {}) {
+    if (isAbort(err)) return;
+    console.error(logPrefix, err);
+    if (uiMessage) this.ui.showError(uiMessage);
+  }
+
+  _idForName(name) {
+    return this.state.pokemonNameMap.get(String(name).toLowerCase());
   }
 
   /**
@@ -194,11 +208,11 @@ class PokedexController {
 
     // Restore the last Pokémon the user viewed, if any; otherwise a starter.
     let lastId = NaN;
-    lastId = parseInt(StorageHelper.loadRaw("pokedex_last_id"), 10);
+    lastId = parseInt(StorageHelper.loadRaw(LAST_ID_KEY), 10);
 
     if (Number.isInteger(lastId) && lastId > 0) {
       this.fetchPokemonById(lastId).catch((err) => {
-        if (err?.name !== "AbortError") this.loadStarterPokemon();
+        if (!isAbort(err)) this.loadStarterPokemon();
       });
     } else {
       this.loadStarterPokemon();
@@ -220,7 +234,7 @@ class PokedexController {
     const id = starterIds[Math.floor(Math.random() * starterIds.length)];
 
     this.fetchPokemonById(id).catch((err) => {
-      if (err?.name !== "AbortError") {
+      if (!isAbort(err)) {
         this.ui.showNotice("Failed to load starter Pokémon");
         console.error("Failed to fetch starter Pokémon:", err);
       }
@@ -260,9 +274,7 @@ class PokedexController {
     try {
       await this.progressivelyLoadPokemonList();
     } catch (err) {
-      if (err?.name !== "AbortError") {
-        console.error("Could not load the Pokédex list:", err);
-      }
+      this._reportError(err, { logPrefix: "Could not load the Pokédex list:" });
     }
   }
 
@@ -309,10 +321,10 @@ class PokedexController {
       this.state.totalPokemon = tempList.length;
       StorageHelper.saveToStorage(key, tempList);
     } catch (err) {
-      if (err?.name !== "AbortError") {
-        this.ui.showError("Error loading Pokédex database. Try refreshing.");
-        console.error("Error loading pokemon list progressively:", err);
-      }
+      // Both callers of this method already want to fail silently (one via
+      // .catch(() => {}), the other via its own try/catch) - don't surface
+      // an error banner here, just log it.
+      this._reportError(err, { logPrefix: "Error loading pokemon list progressively:" });
       // State remains unchanged if error occurs during loading
     }
     // If the pokedex was opened while the list was still loading and nothing
@@ -324,14 +336,18 @@ class PokedexController {
   
 
   async fetchPokemonById(id, options = {}) {
+    const gen = ++this.state.requestGeneration;
     try {
       this.ui.showLoading("Loading...", { keepScreen: !!options.keepScreen });
       // Render the sprite and core details from a single request first...
       const base = await this.getPokemonBase(id, options);
+      // A newer fetchPokemonById call started while this one was in flight;
+      // let that one own the UI instead of rendering this stale response.
+      if (gen !== this.state.requestGeneration) return;
       this.state.currentId = base.id;
       this.ui.setSearchValue(base.name);
       await this.ui.displayPokemon(base);
-      StorageHelper.saveRaw("pokedex_last_id", base.id);
+      StorageHelper.saveRaw(LAST_ID_KEY, base.id);
       this._warmBackSprite(base);
 
       // ...then fetch species + evolution and patch the details panel in,
@@ -344,7 +360,7 @@ class PokedexController {
             }
           })
           .catch((err) => {
-            if (err?.name !== "AbortError") {
+            if (!isAbort(err)) {
               console.error("Failed to load Pokemon details:", err);
               base.speciesLoadFailed = true;
               if (this.state.currentId === base.id) {
@@ -356,7 +372,7 @@ class PokedexController {
 
       this.preloadAdjacentPokemon(id);
     } catch (err) {
-      if (err?.name === "AbortError") throw err;
+      if (isAbort(err)) throw err;
       this.ui.showError(`Error loading Pokemon #${id}.`);
       this.ui.clearMainScreen();
       throw err;
@@ -380,7 +396,7 @@ class PokedexController {
     // id (one entry per Pokémon instead of two, restoring full capacity).
     const id = isNumber
       ? Number(idOrName)
-      : this.state.pokemonNameMap.get(String(idOrName).toLowerCase());
+      : this._idForName(idOrName);
 
     if (id) {
       const cached = this.state.pokemonCache.get(id);
@@ -400,8 +416,7 @@ class PokedexController {
       this.state.pokemonNameMap.set(nameLower, data.id);
       return data;
     } catch (err) {
-      if (err?.name === "AbortError") throw err;
-      console.error(`Error fetching Pokemon data for ${idOrName}:`, err);
+      this._reportError(err, { logPrefix: `Error fetching Pokemon data for ${idOrName}:` });
       throw err;
     }
   }
@@ -424,12 +439,12 @@ class PokedexController {
   }
 
   selectPokemonByName(name) {
-    const id = this.state.pokemonNameMap.get(String(name).toLowerCase());
+    const id = this._idForName(name);
     if (!id) return;
     this.ui.setSearchButtonLabel();
     this.ui.setSearchValue(name);
     this.fetchPokemonById(id, { keepScreen: true }).catch((err) => {
-      if (err?.name !== "AbortError") {
+      if (!isAbort(err)) {
         this.ui.showError(`Error loading ${name}.`);
       }
     });
@@ -473,7 +488,7 @@ class PokedexController {
       return;
     }
 
-    const exactMatch = this.state.pokemonNameMap.get(query);
+    const exactMatch = this._idForName(query);
     if (exactMatch) {
       await this.fetchPokemonById(exactMatch, { ...options, keepScreen: true });
       this.ui.blurSearchInput();
@@ -481,32 +496,31 @@ class PokedexController {
     }
 
     // Implement progressive search with virtual scrolling
-    await this.renderSearchSuggestions(query);
+    await this.renderSearchSuggestions(query, options);
   }
 
-  async renderSearchSuggestions(query) {
+  async renderSearchSuggestions(query, options = {}) {
     // _performSearch already handled the exact-match case before calling this.
     // Implement fuzzy search with multiple matching strategies
     const allMatches = this._fuzzySearch(query);
-    
+
     // If there's only one match, show its details directly
     if (allMatches.length === 1) {
-      const singleMatchId = this.state.pokemonNameMap.get(allMatches[0]);
+      const singleMatchId = this._idForName(allMatches[0]);
       if (singleMatchId) {
-        await this.fetchPokemonById(singleMatchId, { keepScreen: true });
+        await this.fetchPokemonById(singleMatchId, { ...options, keepScreen: true });
         this.ui.blurSearchInput();
         return;
       }
     }
 
     if (allMatches.length > 0) {
-      // Use virtual scrolling to render only visible items
       const withIds = allMatches.map((name) => ({
         name,
-        id: this.state.pokemonNameMap.get(name),
+        id: this._idForName(name),
       }));
       this.ui.setSearchButtonLabel(allMatches.length);
-      this.ui.renderPaginatedSuggestions(withIds, withIds.length, (selectedItem) => {
+      this.ui.renderSuggestions(withIds, (selectedItem) => {
         this.selectPokemonByName(selectedItem.name);
       });
       // Move focus onto the first result so arrow keys immediately rove the

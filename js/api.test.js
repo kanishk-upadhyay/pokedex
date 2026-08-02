@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Cache, spriteUrl } from "./api.js";
+import { Cache, spriteUrl, RequestQueue } from "./api.js";
 
 test("Cache: evicts the least-recently-used entry when full", () => {
   const c = new Cache(2);
@@ -72,4 +72,43 @@ test("spriteUrl: leaves non-matching URLs unchanged", () => {
 test("spriteUrl: passes through non-string input", () => {
   assert.equal(spriteUrl(null), null);
   assert.equal(spriteUrl(undefined), undefined);
+});
+
+test("RequestQueue: reserves the next slot synchronously so concurrent calls don't race", async () => {
+  const rq = new RequestQueue(50);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({}) });
+  try {
+    const start = rq.lastRequestTime;
+    const p1 = rq.enqueue("a"); // reservation happens synchronously, before any await
+    const afterFirst = rq.lastRequestTime;
+    const p2 = rq.enqueue("b");
+    const afterSecond = rq.lastRequestTime;
+    assert.ok(afterFirst >= start);
+    assert.ok(afterSecond - afterFirst >= 50);
+    await Promise.all([p1, p2]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("RequestQueue: concurrent calls are spaced by exactly minInterval, not 2x", async () => {
+  const rq = new RequestQueue(50);
+  const originalFetch = globalThis.fetch;
+  const fireTimes = [];
+  globalThis.fetch = async () => {
+    fireTimes.push(Date.now());
+    return { ok: true, json: async () => ({}) };
+  };
+  try {
+    await Promise.all([rq.enqueue("a"), rq.enqueue("b"), rq.enqueue("c")]);
+    fireTimes.sort((a, b) => a - b);
+    const gap1 = fireTimes[1] - fireTimes[0];
+    const gap2 = fireTimes[2] - fireTimes[1];
+    // Allow small scheduling jitter but reject the old bug's ~2x doubling.
+    assert.ok(gap1 < 90, `expected ~50ms gap, got ${gap1}ms`);
+    assert.ok(gap2 < 90, `expected ~50ms gap, got ${gap2}ms`);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

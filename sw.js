@@ -7,7 +7,7 @@
    - img   : cache-first for sprites (immutable), capped (FIFO eviction)
 */
 
-const VERSION = "v10";
+const VERSION = "v13";
 const SHELL_CACHE = `pokedex-shell-${VERSION}`;
 const API_CACHE = `pokedex-api-${VERSION}`;
 const IMG_CACHE = `pokedex-img-${VERSION}`;
@@ -29,9 +29,15 @@ const STATIC_FILES = [
   "/js/dom.js",
   "/js/ui.js",
   "/js/search.js",
+  "/js/format.js",
   "/manifest.webmanifest",
+  "/favicon.ico",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
+  "/assets/fonts/outfit-700.woff2",
+  "/assets/fonts/inter-400.woff2",
+  "/assets/fonts/inter-500.woff2",
+  "/assets/fonts/jetbrains-mono-400.woff2",
 ];
 
 // Evict oldest entries (FIFO — Cache.keys() is insertion-ordered) once a
