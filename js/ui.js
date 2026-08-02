@@ -572,7 +572,7 @@ class UIController {
     // species (e.g. Mega Charizard X lives on /pokedex/charizard), so use the
     // species name rather than the form name to avoid 404s.
     const speciesName = pokemon.species?.name || pokemon.name;
-    const dexNumber = pokemon.id != null ? ` - ${formatDexNumber(pokemon.id)}` : "";
+    const dexNumber = formatDexNumber(pokemon.id);
     const nameEl = el(
       "h3",
       { class: "pokemon-name" },
