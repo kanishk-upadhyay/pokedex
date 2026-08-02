@@ -18,6 +18,7 @@ const CACHE_EXPIRATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 const CACHE_MAX_SIZE = 300;
 export const NAME_LIST_KEY = "pokedex_name_list_v1";
 export const NAME_LIST_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+export const LAST_ID_KEY = "pokedex_last_id";
 
 /**
  * Enhanced LRU cache implementation with expiration
