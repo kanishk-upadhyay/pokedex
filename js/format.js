@@ -25,10 +25,14 @@ const HYPHENATED_BASE_SLUGS = [
   "nidoran-m",
 ];
 
+function capitalize(word) {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
 function titleCaseHyphenated(slug) {
   return slug
     .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .map(capitalize)
     .join("-");
 }
 
@@ -58,7 +62,7 @@ export function formatPokemonName(name) {
   // Title-case each part of the suffix and join with spaces
   const suffix = suffixSlug
     .split("-")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .map(capitalize)
     .join(" ");
 
   return `${base} (${suffix})`;
@@ -75,6 +79,6 @@ export function formatSlugName(slug) {
   if (!slug || typeof slug !== "string") return "";
   return slug
     .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .map(capitalize)
     .join(" ");
 }
