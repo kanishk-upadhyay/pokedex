@@ -1,5 +1,7 @@
 # Modern-UI Redesign Implementation Plan
 
+> **Status: COMPLETE.** All tasks in this plan have been implemented, tested, and merged into `modern-ui-redesign`. Checkboxes below were not retroactively checked off; treat this note as authoritative over the unchecked `- [ ]` markers throughout the rest of the file.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Re-skin the Pokédex screens (details panel, search, suggestions list, title) with self-hosted modern fonts (Outfit/Inter/JetBrains Mono), a single cyan accent color for in-screen interactive/selected state, and small element-composition changes (stacked name/dex-number, eyebrow labels, formatted form names) — while leaving DOM structure, layout regions, shell chrome (D-pad/camera-lens/LED), and type-chip colors untouched.
