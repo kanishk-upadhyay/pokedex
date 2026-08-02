@@ -7,7 +7,7 @@
    - img   : cache-first for sprites (immutable), capped (FIFO eviction)
 */
 
-const VERSION = "v12";
+const VERSION = "v13";
 const SHELL_CACHE = `pokedex-shell-${VERSION}`;
 const API_CACHE = `pokedex-api-${VERSION}`;
 const IMG_CACHE = `pokedex-img-${VERSION}`;
@@ -31,6 +31,7 @@ const STATIC_FILES = [
   "/js/search.js",
   "/js/format.js",
   "/manifest.webmanifest",
+  "/favicon.ico",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/assets/fonts/outfit-700.woff2",
