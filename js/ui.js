@@ -521,32 +521,34 @@ class UIController {
       return;
     }
 
-    if (this.state.lastDisplayedId === pokemon.id) {
-      return;
-    }
+    // Skip the (flicker-prone) sprite remount when it's already showing this
+    // Pokémon, but always re-render the details panel below: a keepScreen
+    // search (e.g. re-searching the currently displayed Pokémon) overwrites
+    // it with a transient "Searching..." message that only this call clears.
+    if (this.state.lastDisplayedId !== pokemon.id) {
+      this.state.lastDisplayedId = pokemon.id;
+      this.elements.mainScreen.innerHTML = "";
 
-    this.state.lastDisplayedId = pokemon.id;
-    this.elements.mainScreen.innerHTML = "";
+      if (pokemon.sprites?.front_default) {
+        const imageEl = img(spriteUrl(pokemon.sprites.front_default), {
+          class: "pokemon-image fullscreen",
+          alt: pokemon.name || "",
+          loading: "eager",
+          decoding: "async",
+        });
 
-    if (pokemon.sprites?.front_default) {
-      const imageEl = img(spriteUrl(pokemon.sprites.front_default), {
-        class: "pokemon-image fullscreen",
-        alt: pokemon.name || "",
-        loading: "eager",
-        decoding: "async",
-      });
+        this.elements.mainScreen.appendChild(imageEl);
+        this._mountSpriteWithSkeleton(imageEl, pokemon);
 
-      this.elements.mainScreen.appendChild(imageEl);
-      this._mountSpriteWithSkeleton(imageEl, pokemon);
-
-      this.state.showingFront = true;
-      imageEl.addEventListener("click", () =>
-        this._handleSpriteClick(pokemon, imageEl),
-      );
-    } else {
-      this.elements.mainScreen.appendChild(
-        el("div", { class: "loading" }, "Image not available"),
-      );
+        this.state.showingFront = true;
+        imageEl.addEventListener("click", () =>
+          this._handleSpriteClick(pokemon, imageEl),
+        );
+      } else {
+        this.elements.mainScreen.appendChild(
+          el("div", { class: "loading" }, "Image not available"),
+        );
+      }
     }
 
     this._renderDetails(pokemon);
