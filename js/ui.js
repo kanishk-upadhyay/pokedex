@@ -23,6 +23,7 @@
 
 import { el, img } from "./dom.js";
 import { spriteUrl } from "./api.js";
+import { formatPokemonName } from "./format.js";
 
 class UIController {
   constructor() {
@@ -567,6 +568,9 @@ class UIController {
     // species (e.g. Mega Charizard X lives on /pokedex/charizard), so use the
     // species name rather than the form name to avoid 404s.
     const speciesName = pokemon.species?.name || pokemon.name;
+    const dexNumber = Number.isFinite(pokemon.id)
+      ? `N°${String(pokemon.id).padStart(3, "0")}`
+      : "";
     const nameEl = el(
       "h3",
       { class: "pokemon-name" },
@@ -579,9 +583,9 @@ class UIController {
           rel: "noopener noreferrer",
           title: `View ${pokemon.name} on PokémonDB`,
         },
-        pokemon.name,
+        formatPokemonName(pokemon.name),
       ),
-      el("span", { class: "pokemon-id" }, ` - ${pokemon.id}`),
+      el("span", { class: "pokemon-id" }, dexNumber),
     );
 
     // Colour the name with the primary type. For dual-type Pokémon, add a hard
@@ -602,7 +606,12 @@ class UIController {
     const typeChips = (pokemon.types || []).map((t) =>
       el("span", { class: `type-chip ${t.type.name}` }, t.type.name),
     );
-    const typesEl = el("p", { class: "pokemon-types" }, el("strong", {}, "Type: "), ...typeChips);
+    const typesEl = el(
+      "div",
+      { class: "pokemon-types" },
+      el("span", { class: "detail-eyebrow" }, "Type"),
+      el("div", { class: "detail-value" }, ...typeChips),
+    );
 
     const entryEl = el(
       "p",
@@ -611,17 +620,17 @@ class UIController {
     );
 
     const abilitiesEl = el(
-      "p",
+      "div",
       { class: "pokemon-abilities" },
-      el("strong", {}, "Abilities: "),
-      this._getAbilitiesString(pokemon),
+      el("span", { class: "detail-eyebrow" }, "Abilities"),
+      el("div", { class: "detail-value" }, this._getAbilitiesString(pokemon)),
     );
 
     const movesEl = el(
-      "p",
+      "div",
       { class: "pokemon-moves" },
-      el("strong", {}, "Moves: "),
-      this._getMovesString(pokemon),
+      el("span", { class: "detail-eyebrow" }, "Moves"),
+      el("div", { class: "detail-value" }, this._getMovesString(pokemon)),
     );
     const container = el(
       "div",
@@ -636,9 +645,9 @@ class UIController {
     const evolutionChain = this._buildEvolutionChain(pokemon);
     if (evolutionChain.length > 1) {
       const evolutionsEl = el(
-        "p",
-        { class: "pokemon-evolutions" },  // Remove the color class from parent
-        el("strong", {}, "Evolutions: "),
+        "div",
+        { class: "pokemon-evolutions" },
+        el("span", { class: "detail-eyebrow" }, "Evolutions"),
       );
 
       evolutionChain.forEach((node) => evolutionsEl.appendChild(node));
@@ -934,7 +943,8 @@ class UIController {
   }
 
   _createSuggestionItem(item, onSelect) {
-    const label = item.name || "";
+    const rawName = item.name || "";
+    const label = formatPokemonName(rawName);
     const dex = Number.isFinite(item.id) ? `N°${String(item.id).padStart(3, "0")}` : "";
     const btn = el(
       "button",
@@ -943,7 +953,7 @@ class UIController {
         class: "suggestion-button",
         onClick: (ev) => {
           ev.preventDefault();
-          onSelect?.({ name: label });
+          onSelect?.({ name: rawName });
         },
         onFocus: () => {
           // Preview the highlighted match in the search box as roving focus
@@ -963,7 +973,7 @@ class UIController {
           ev.preventDefault();
           ev.stopPropagation();
           if (ev.key === "Enter" || ev.key === " ") {
-            onSelect?.({ name: label });
+            onSelect?.({ name: rawName });
           } else if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
             this._moveSuggestionFocus(ev.currentTarget, ev.key === "ArrowDown" ? 1 : -1);
           } else {

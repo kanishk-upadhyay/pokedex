@@ -107,7 +107,6 @@ body {
     text-transform: uppercase;
     margin-bottom: 20px;
     letter-spacing: 2px;
-    animation: pulsate 1.5s infinite alternate;
     max-width: 100%;
     text-align: center;
     transition: all 0.3s ease;
@@ -227,19 +226,45 @@ body {
 
 /* Pokemon details styling */
 .pokemon-name {
+    display: block;
+    font-family: var(--font-heading);
+    font-weight: 700;
     font-size: 20px;
-    text-transform: capitalize;
-    margin: auto auto 0.5em;
+    text-transform: none;
+    margin: 0 0 0.15em;
     color: ivory;
 }
 
 .pokemon-id {
-    margin: auto;
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    opacity: 0.7;
+    letter-spacing: 0.5px;
+    margin: 0 0 0.5em;
 }
 
 .pokemon-entry {
+    font-family: var(--font-body);
     font-size: 14px;
     margin: 0.5em auto;
+}
+
+.detail-eyebrow {
+    display: block;
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-text-secondary);
+    opacity: 0.7;
+    margin-bottom: 0.2em;
+}
+
+.detail-value {
+    font-family: var(--font-body);
 }
 
 /* Semantic status messages: colour + left accent bar + monochrome icon.
@@ -774,22 +799,6 @@ body {
     }
 }
 
-/* Animations */
-@keyframes pulsate {
-    from {
-        text-shadow:
-            0 0 10px rgba(255, 204, 0, 0.7),
-            0 0 20px rgba(255, 204, 0, 0.5),
-            0 0 30px rgba(255, 204, 0, 0.3);
-    }
-    to {
-        text-shadow:
-            0 0 15px rgba(255, 204, 0, 0.9),
-            0 0 25px rgba(255, 204, 0, 0.7),
-            0 0 35px rgba(255, 204, 0, 0.5);
-    }
-}
-
 /* Offline indicator styling */
 .offline-indicator {
     position: fixed;
@@ -1038,8 +1047,8 @@ body {
     }
 }
 
-/* Respect users who prefer reduced motion: disable the title pulse, sprite
-   shimmer, offline-badge pulse, and all transitions/animations. */
+/* Respect users who prefer reduced motion: disable the sprite shimmer,
+   offline-badge pulse, and all transitions/animations. */
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
