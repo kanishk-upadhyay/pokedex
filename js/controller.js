@@ -440,10 +440,9 @@ class PokedexController {
     this.ui.setSearchButtonLabel();
     this.ui.setSearchValue(name);
     this.fetchPokemonById(id, { keepScreen: true }).catch((err) => {
-      this._reportError(err, {
-        logPrefix: `Error loading ${name}:`,
-        uiMessage: `Error loading ${name}.`,
-      });
+      if (!isAbort(err)) {
+        this.ui.showError(`Error loading ${name}.`);
+      }
     });
   }
 
