@@ -371,8 +371,12 @@ class UIController {
   //   notice  -> user-input issue, e.g. not found / out of range (amber)
   //   info    -> prompt / neutral guidance (cyan)
   //   loading -> in progress (green)
-  _setDetailsMessage(message, kind) {
-    this.state.lastDisplayedId = null;
+  _setDetailsMessage(message, kind, { keepScreen = false } = {}) {
+    // Only invalidate the "already showing this Pokémon" guard when the
+    // main screen is actually being replaced - a keepScreen loading message
+    // (e.g. while searching) shouldn't defeat displayPokemon's redundant-
+    // render check for the Pokémon still on screen.
+    if (!keepScreen) this.state.lastDisplayedId = null;
     const area = this.elements.detailsArea;
     if (!area) return;
     this._clearMessageState();
@@ -381,7 +385,7 @@ class UIController {
   }
 
   showLoading(message = "Loading...", { keepScreen = false } = {}) {
-    this._setDetailsMessage(message, "loading");
+    this._setDetailsMessage(message, "loading", { keepScreen });
     // Search keeps the current sprite visible: the left screen is not used to
     // show search results, so only blank it for a full Pokémon load.
     if (!keepScreen && this.elements.mainScreen) {
@@ -671,10 +675,18 @@ class UIController {
   // remove it (or mark it failed) — shared by the initial render and the
   // front/back flip so both show the same loading feedback.
   _wireSpriteLoadState(img, skeleton, pokemon) {
+    // A rapid second flip can wire a new skeleton before the previous one's
+    // load/error fires, overwriting img.onload/onerror; without this the
+    // earlier skeleton is orphaned and never removed from the DOM.
+    img.__pendingSkeleton?.remove();
+    img.__pendingSkeleton = skeleton;
+
     img.onload = () => {
+      if (img.__pendingSkeleton === skeleton) img.__pendingSkeleton = null;
       if (this.state.lastDisplayedId === pokemon.id) skeleton.remove();
     };
     img.onerror = (err) => {
+      if (img.__pendingSkeleton === skeleton) img.__pendingSkeleton = null;
       console.error("Image failed to load:", pokemon.name, img.src, err);
       if (this.state.lastDisplayedId === pokemon.id) {
         skeleton.classList.add("failed");
@@ -861,73 +873,29 @@ class UIController {
   }
 
   /**
-   * Renders paginated search suggestions, loading further pages automatically
-   * as the list is scrolled instead of behind a mouse-only "Load more" button
-   * — keyboard/roving nav scrolls the list natively, so this keeps that path
-   * able to reach every match too.
+   * Renders search suggestions as a list of clickable buttons.
    * @param {Array} allItems - Array of suggestion items to render
-   * @param {number} pageSize - Number of items to show initially
    * @param {Function} onSelect - Callback function when a suggestion is clicked
    * @returns {Element|null} - The container element or null if no items
    */
-  renderPaginatedSuggestions(allItems = [], pageSize = 10, onSelect) {
+  renderSuggestions(allItems = [], onSelect) {
     if (!this.elements.detailsArea || !Array.isArray(allItems) || allItems.length === 0) return null;
 
-    // Clear existing content
     this._clearMessageState();
     this.elements.detailsArea.innerHTML = "";
 
-    // Create container for suggestions
     const container = el("div", { class: "suggestions-container" });
-
-    const state = { loadedCount: 0 };
-
     const listEl = el("ul", {
       class: "suggestions-list",
       role: "listbox",
       "aria-label": "Search suggestions",
     });
 
-    const sentinel = el("li", { class: "suggestions-sentinel", "aria-hidden": "true" });
-
-    const loadNextPage = () => {
-      const startIndex = state.loadedCount;
-      const itemsToLoad = allItems.slice(startIndex, startIndex + pageSize);
-      if (itemsToLoad.length === 0) return;
-
-      const rendered = itemsToLoad
-        .map(this._normalizeItem.bind(this))
-        .filter(Boolean)
-        .map((item) => this._createSuggestionItem(item, onSelect));
-
-      const frag = document.createDocumentFragment();
-      rendered.forEach((r) => frag.appendChild(r));
-      listEl.insertBefore(frag, sentinel);
-      state.loadedCount = startIndex + itemsToLoad.length;
-
-      if (state.loadedCount >= allItems.length) {
-        observer.disconnect();
-        sentinel.remove();
-      }
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) loadNextPage();
-    }, { root: this.elements.detailsArea });
-
-    // Roving focus (see _moveSuggestionFocus) can reach the last loaded item
-    // without ever scrolling the off-screen sentinel into view, so it calls
-    // this directly rather than relying solely on the observer.
-    listEl.loadMoreSuggestions = loadNextPage;
-
-    listEl.appendChild(sentinel);
-    loadNextPage();
-
-    if (allItems.length > pageSize) {
-      observer.observe(sentinel);
-    } else {
-      sentinel.remove();
-    }
+    allItems
+      .map(this._normalizeItem.bind(this))
+      .filter(Boolean)
+      .map((item) => this._createSuggestionItem(item, onSelect))
+      .forEach((r) => listEl.appendChild(r));
 
     container.appendChild(listEl);
     this.elements.detailsArea.appendChild(container);
@@ -997,7 +965,7 @@ class UIController {
   _moveSuggestionFocus(current, delta) {
     const list = current.closest(".suggestions-list");
     if (!list) return;
-    let buttons = Array.from(list.querySelectorAll(".suggestion-button"));
+    const buttons = Array.from(list.querySelectorAll(".suggestion-button"));
     const idx = buttons.indexOf(current);
     if (idx === -1) return;
 
@@ -1005,14 +973,6 @@ class UIController {
       this.setSearchValue(this.state.typedQuery);
       this.elements.searchInput?.focus({ preventScroll: true });
       return;
-    }
-
-    // Reaching the last loaded item never scrolls the (off-screen, aria-hidden)
-    // sentinel into view, so the IntersectionObserver behind it never fires —
-    // load the next page directly instead of wrapping prematurely.
-    if (delta === 1 && idx === buttons.length - 1) {
-      list.loadMoreSuggestions?.();
-      buttons = Array.from(list.querySelectorAll(".suggestion-button"));
     }
 
     // Unlike the search-box bridge (which only ever focuses the first,

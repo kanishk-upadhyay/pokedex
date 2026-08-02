@@ -122,7 +122,7 @@ export class StorageHelper {
 /**
  * Simple request throttle to space API calls and avoid rate limiting
  */
-class RequestQueue {
+export class RequestQueue {
   constructor(minInterval = MIN_REQUEST_INTERVAL) {
     this.minInterval = minInterval;
     this.lastRequestTime = 0;
@@ -131,14 +131,17 @@ class RequestQueue {
   async enqueue(url, options = {}) {
     const now = Date.now();
     const delay = Math.max(0, this.lastRequestTime + this.minInterval - now);
-    
+    // Reserve this slot synchronously (before awaiting) so a concurrent
+    // caller sees the reservation immediately instead of racing on a stale
+    // lastRequestTime and computing the same too-short delay.
+    this.lastRequestTime = Math.max(now, this.lastRequestTime) + this.minInterval;
+
     if (delay > 0) {
       await new Promise(resolve => setTimeout(resolve, delay));
     }
 
     const response = await fetch(url, options);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    this.lastRequestTime = Date.now();
     return await response.json();
   }
 }
@@ -168,6 +171,16 @@ export function spriteUrl(url) {
     "https://raw.githubusercontent.com/PokeAPI/sprites/master/",
     "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/",
   );
+}
+
+/**
+ * Check whether an error is a fetch/AbortController abort - the standard way
+ * to distinguish "the request was cancelled" from a genuine failure.
+ * @param {*} err - Error to check
+ * @returns {boolean}
+ */
+export function isAbort(err) {
+  return err?.name === "AbortError";
 }
 
 export class PokemonAPI {
