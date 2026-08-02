@@ -569,7 +569,7 @@ class UIController {
     // species name rather than the form name to avoid 404s.
     const speciesName = pokemon.species?.name || pokemon.name;
     const dexNumber = Number.isFinite(pokemon.id)
-      ? `N°${String(pokemon.id).padStart(3, "0")}`
+      ? ` - N°${String(pokemon.id).padStart(3, "0")}`
       : "";
     const nameEl = el(
       "h3",
@@ -607,10 +607,10 @@ class UIController {
       el("span", { class: `type-chip ${t.type.name}` }, t.type.name),
     );
     const typesEl = el(
-      "div",
+      "p",
       { class: "pokemon-types" },
-      el("span", { class: "detail-eyebrow" }, "Type"),
-      el("div", { class: "detail-value" }, ...typeChips),
+      el("strong", {}, "Type: "),
+      ...typeChips,
     );
 
     const entryEl = el(

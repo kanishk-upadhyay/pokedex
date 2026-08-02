@@ -82,6 +82,10 @@
 
 html {
     font-size: clamp(12px, 2vw, 18px);
+    /* height (not min-height: 100vh on body) so the CSS `zoom` scaling used
+       for the large-display breakpoints below scales the viewport unit
+       itself rather than inflating past it. */
+    height: 100%;
 }
 
 body {
@@ -93,9 +97,9 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
+    min-height: 100%;
     margin: 0;
-    padding: 20px;
+    padding: 12px;
 }
 
 /* Title styling */
@@ -105,7 +109,7 @@ body {
     font-weight: 700;
     font-size: 3rem;
     text-transform: uppercase;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     letter-spacing: 2px;
     max-width: 100%;
     text-align: center;
@@ -119,7 +123,7 @@ body {
     position: relative;
     perspective: 2000px;
     transform-style: preserve-3d;
-    margin: 50px auto;
+    margin: 20px auto;
     transition: width 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     border-radius: 0 0 10px 10px;
     background-color: transparent;
@@ -226,41 +230,40 @@ body {
 
 /* Pokemon details styling */
 .pokemon-name {
-    display: block;
     font-family: var(--font-heading);
     font-weight: 700;
-    font-size: 20px;
+    font-size: 18px;
     text-transform: none;
-    margin: 0 0 0.15em;
+    margin: auto auto 0.4em;
     color: ivory;
+    line-height: 1.15;
 }
 
 .pokemon-id {
-    display: block;
     font-family: var(--font-mono);
     font-size: 12px;
     color: var(--color-text-secondary);
     opacity: 0.7;
     letter-spacing: 0.5px;
-    margin: 0 0 0.5em;
 }
 
 .pokemon-entry {
     font-family: var(--font-body);
-    font-size: 14px;
-    margin: 0.5em auto;
+    font-size: 11px;
+    line-height: 1.3;
+    margin: 0.35em auto;
 }
 
 .detail-eyebrow {
     display: block;
     font-family: var(--font-body);
     font-weight: 500;
-    font-size: 10px;
+    font-size: 9px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
     color: var(--color-text-secondary);
     opacity: 0.7;
-    margin-bottom: 0.2em;
+    margin-bottom: 0.15em;
 }
 
 .detail-value {
@@ -287,12 +290,19 @@ body {
 .pokemon-details-area.details-info::before    { content: "\2139\FE0E  "; }   /* i  */
 .pokemon-details-area.details-loading::before { content: "\27F3  "; }        /* loop */
 
-.pokemon-types,
+.pokemon-types {
+    font-size: 11px;
+    line-height: 1.3;
+    margin: 0.3em auto;
+    text-transform: capitalize;
+}
+
 .pokemon-abilities,
 .pokemon-moves,
 .pokemon-evolutions {
-    font-size: 13px;
-    margin: auto;
+    font-size: 11px;
+    line-height: 1.3;
+    margin: 0.3em auto;
     text-transform: capitalize;
 }
 
@@ -317,11 +327,11 @@ body {
 /* Type chips styling */
 .type-chip {
     display: inline-block;
-    padding: 3px 8px;
-    margin: 2px;
-    border-radius: 12px;
+    padding: 2px 7px;
+    margin: 1px 3px 1px 0;
+    border-radius: 10px;
     text-transform: capitalize;
-    font-size: 13px;
+    font-size: 11px;
     color: white;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
     background-color: var(--type-color, #ccc); /* Default fallback */
@@ -545,7 +555,7 @@ body {
 /* Search area styling */
 .pokemon-search-area {
     display: flex;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
     width: 100%;
     flex-shrink: 0; /* Prevent search area from shrinking */
 }
@@ -603,13 +613,21 @@ body {
 }
 
 /* Pokemon details display area */
+.secondary-screen {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0; /* let content scroll within the available space instead
+                       of growing past it (and under the button grid below) */
+}
+
 .pokemon-details-area {
     flex-grow: 3;
+    min-height: 0; /* same reason as .secondary-screen above */
     overflow-y: auto;
-    padding: 5px;
+    padding: 8px;
     color: var(--color-text-secondary);
-    font-size: 14px;
-    max-height: 230px;
+    font-size: 12px;
     background-color: #181818;
     border-radius: var(--border-radius-standard);
     border: 1px solid #333;
@@ -733,10 +751,9 @@ body {
 /* Blue buttons for right panel */
 .blue-button-grid {
     display: grid;
-    position: absolute;
-    bottom: 38px;
-    left: 15px;
-    right: 15px;
+    flex-shrink: 0; /* stay in normal flex flow below .secondary-screen so it
+                        always reserves its own space and can never be
+                        overlapped by long details content */
     grid-template-columns: repeat(5, 1fr);
     grid-template-rows: repeat(2, 1fr);
     gap: 10px;
@@ -796,6 +813,36 @@ body {
 @media (max-width: 400px) {
     html {
         zoom: 0.55;
+    }
+}
+
+/* Scale up on larger displays so the Pokédex makes better use of the
+   available screen real estate. Gated on BOTH width and height so a
+   wide-but-short window (or the open (600px) layout) never grows past
+   what's visible. */
+@media (min-width: 900px) and (min-height: 790px) {
+    html {
+        zoom: 1.2;
+    }
+}
+@media (min-width: 1200px) and (min-height: 880px) {
+    html {
+        zoom: 1.35;
+    }
+}
+@media (min-width: 1500px) and (min-height: 1010px) {
+    html {
+        zoom: 1.55;
+    }
+}
+@media (min-width: 1900px) and (min-height: 1090px) {
+    html {
+        zoom: 1.68;
+    }
+}
+@media (min-width: 2400px) and (min-height: 1300px) {
+    html {
+        zoom: 2;
     }
 }
 
