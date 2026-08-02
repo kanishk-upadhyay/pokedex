@@ -62,6 +62,8 @@
     --color-shadow-yellow: rgba(255, 204, 0, 0.7);
     --color-shadow-yellow-soft: rgba(255, 204, 0, 0.4);
     --color-accent: #35c2c8;
+    --color-panel-dark: #222;
+    --color-border-muted: #444;
 
     /* Common values */
     --border-radius-standard: 5px;
@@ -172,7 +174,7 @@ body {
     left: 0;
     width: 300px;
     height: 2.5px;
-    background-color: #222;
+    background-color: var(--color-panel-dark);
     z-index: 3;
 }
 
@@ -506,7 +508,7 @@ body {
     background-color: #111;
     overflow: hidden;
     box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
-    border: 3px solid #222;
+    border: 3px solid var(--color-panel-dark);
     border-radius: var(--border-radius-standard);
     width: 80%;
     height: 45%;
@@ -584,8 +586,8 @@ body {
 }
 
 .pokemon-search-input {
-    background-color: #222;
-    border: 1px solid #444;
+    background-color: var(--color-panel-dark);
+    border: 1px solid var(--color-border-muted);
     color: ivory;
     padding: 5px;
     flex-grow: 1;
@@ -617,8 +619,8 @@ body {
 }
 
 .pokemon-search-button {
-    background-color: #222;
-    border: 1px solid #444;
+    background-color: var(--color-panel-dark);
+    border: 1px solid var(--color-border-muted);
     color: #d895da;
     cursor: pointer;
     border-radius: 0 5px 5px 0;
@@ -656,7 +658,7 @@ body {
     border: 1px solid #333;
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
     scrollbar-width: thin;
-    scrollbar-color: #444 #222;
+    scrollbar-color: var(--color-border-muted) var(--color-panel-dark);
 }
 
 /* Webkit browsers (Chrome, Safari, Edge) */
@@ -665,12 +667,12 @@ body {
 }
 
 .pokemon-details-area::-webkit-scrollbar-track {
-    background: #222;
+    background: var(--color-panel-dark);
     border-radius: var(--border-radius-standard);
 }
 
 .pokemon-details-area::-webkit-scrollbar-thumb {
-    background: #444;
+    background: var(--color-border-muted);
     border-radius: var(--border-radius-standard);
 }
 
@@ -683,7 +685,7 @@ body {
     position: relative;
     width: 80px;
     height: 80px;
-    background-color: #222;
+    background-color: var(--color-panel-dark);
     border-radius: 50%;
     margin: 45px auto;
     box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
@@ -703,7 +705,7 @@ body {
 .d-pad-left,
 .d-pad-center {
     background-color: #333;
-    border: 1px solid #444;
+    border: 1px solid var(--color-border-muted);
     transition: all 0.1s ease;
 }
 
@@ -729,7 +731,7 @@ body {
 
 .d-pad-center {
     grid-area: center;
-    background-color: #444;
+    background-color: var(--color-border-muted);
     border-radius: 2px;
 }
 
@@ -935,7 +937,7 @@ body {
 
 .shortcuts-modal {
     background: #1a1a1a;
-    border: 2px solid #444;
+    border: 2px solid var(--color-border-muted);
     border-radius: 10px;
     padding: 25px;
     max-width: 500px;
@@ -954,7 +956,7 @@ body {
     align-items: center;
     margin-bottom: 20px;
     padding-bottom: 10px;
-    border-bottom: 1px solid #444;
+    border-bottom: 1px solid var(--color-border-muted);
 }
 
 .shortcuts-title {
