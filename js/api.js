@@ -131,7 +131,7 @@ export class RequestQueue {
 
   async enqueue(url, options = {}) {
     const now = Date.now();
-    const delay = Math.max(0, this.lastRequestTime + this.minInterval - now);
+    const delay = Math.max(0, this.lastRequestTime - now);
     // Reserve this slot synchronously (before awaiting) so a concurrent
     // caller sees the reservation immediately instead of racing on a stale
     // lastRequestTime and computing the same too-short delay.

@@ -91,3 +91,24 @@ test("RequestQueue: reserves the next slot synchronously so concurrent calls don
     globalThis.fetch = originalFetch;
   }
 });
+
+test("RequestQueue: concurrent calls are spaced by exactly minInterval, not 2x", async () => {
+  const rq = new RequestQueue(50);
+  const originalFetch = globalThis.fetch;
+  const fireTimes = [];
+  globalThis.fetch = async () => {
+    fireTimes.push(Date.now());
+    return { ok: true, json: async () => ({}) };
+  };
+  try {
+    await Promise.all([rq.enqueue("a"), rq.enqueue("b"), rq.enqueue("c")]);
+    fireTimes.sort((a, b) => a - b);
+    const gap1 = fireTimes[1] - fireTimes[0];
+    const gap2 = fireTimes[2] - fireTimes[1];
+    // Allow small scheduling jitter but reject the old bug's ~2x doubling.
+    assert.ok(gap1 < 90, `expected ~50ms gap, got ${gap1}ms`);
+    assert.ok(gap2 < 90, `expected ~50ms gap, got ${gap2}ms`);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
