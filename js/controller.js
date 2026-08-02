@@ -82,6 +82,10 @@ class PokedexController {
     if (uiMessage) this.ui.showError(uiMessage);
   }
 
+  _idForName(name) {
+    return this.state.pokemonNameMap.get(String(name).toLowerCase());
+  }
+
   /**
    * Register service worker for offline capability
    */
@@ -392,7 +396,7 @@ class PokedexController {
     // id (one entry per Pokémon instead of two, restoring full capacity).
     const id = isNumber
       ? Number(idOrName)
-      : this.state.pokemonNameMap.get(String(idOrName).toLowerCase());
+      : this._idForName(idOrName);
 
     if (id) {
       const cached = this.state.pokemonCache.get(id);
@@ -435,7 +439,7 @@ class PokedexController {
   }
 
   selectPokemonByName(name) {
-    const id = this.state.pokemonNameMap.get(String(name).toLowerCase());
+    const id = this._idForName(name);
     if (!id) return;
     this.ui.setSearchButtonLabel();
     this.ui.setSearchValue(name);
@@ -484,7 +488,7 @@ class PokedexController {
       return;
     }
 
-    const exactMatch = this.state.pokemonNameMap.get(query);
+    const exactMatch = this._idForName(query);
     if (exactMatch) {
       await this.fetchPokemonById(exactMatch, { ...options, keepScreen: true });
       this.ui.blurSearchInput();
@@ -502,7 +506,7 @@ class PokedexController {
 
     // If there's only one match, show its details directly
     if (allMatches.length === 1) {
-      const singleMatchId = this.state.pokemonNameMap.get(allMatches[0]);
+      const singleMatchId = this._idForName(allMatches[0]);
       if (singleMatchId) {
         await this.fetchPokemonById(singleMatchId, { ...options, keepScreen: true });
         this.ui.blurSearchInput();
@@ -513,7 +517,7 @@ class PokedexController {
     if (allMatches.length > 0) {
       const withIds = allMatches.map((name) => ({
         name,
-        id: this.state.pokemonNameMap.get(name),
+        id: this._idForName(name),
       }));
       this.ui.setSearchButtonLabel(allMatches.length);
       this.ui.renderSuggestions(withIds, (selectedItem) => {
