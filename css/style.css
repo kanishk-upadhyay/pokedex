@@ -1,4 +1,37 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
+
+@font-face {
+    font-family: "Outfit";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("../assets/fonts/outfit-700.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../assets/fonts/inter-400.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url("../assets/fonts/inter-500.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "JetBrains Mono";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../assets/fonts/jetbrains-mono-400.woff2") format("woff2");
+}
+
 :root {
     /* Pokemon type colors */
     --color-normal: #a8a878;
@@ -27,6 +60,7 @@
     --color-pokedex: #e61515;
     --color-pokedex-border: #b00000;
     --color-shadow-yellow: rgba(255, 204, 0, 0.7);
+    --color-accent: #35c2c8;
 
     /* Common values */
     --border-radius-standard: 5px;
@@ -37,6 +71,13 @@
         -apple-system, BlinkMacSystemFont, "avenir next", avenir, "segoe ui",
         "helvetica neue", "Adwaita Sans", Cantarell, Ubuntu, Roboto, Noto,
         helvetica, arial, sans-serif;
+
+    /* Font stacks with fallbacks */
+    --font-heading: "Outfit", -apple-system, BlinkMacSystemFont, "segoe ui",
+        "helvetica neue", sans-serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "segoe ui",
+        "helvetica neue", sans-serif;
+    --font-mono: "JetBrains Mono", "courier new", monospace;
 }
 
 html {
@@ -60,16 +101,13 @@ body {
 /* Title styling */
 .pokedex-title {
     color: #ffcc00;
+    font-family: var(--font-heading);
+    font-weight: 700;
     font-size: 3rem;
     text-transform: uppercase;
     margin-bottom: 20px;
-    letter-spacing: 4px;
-    text-shadow:
-        0 0 10px var(--color-shadow-yellow),
-        0 0 20px rgba(255, 204, 0, 0.5),
-        0 0 30px rgba(255, 204, 0, 0.3);
+    letter-spacing: 2px;
     animation: pulsate 1.5s infinite alternate;
-    font-weight: bold;
     max-width: 100%;
     text-align: center;
     transition: all 0.3s ease;
