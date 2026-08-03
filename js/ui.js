@@ -514,6 +514,11 @@ class UIController {
   async displayPokemon(pokemon) {
     clearTimeout(this.state.spriteMessageTimeout);
     this.state.spriteMessageTimeout = null;
+    // Remove the DOM node directly rather than relying on the (possibly
+    // skipped, when redisplaying the same Pokémon) mainScreen.innerHTML
+    // reset below — otherwise this element is orphaned with no remaining
+    // reference to ever clear it.
+    this.state.spriteMessageElement?.remove();
     this.state.spriteMessageElement = null;
 
     if (!this.elements.mainScreen || !this.elements.detailsArea) {
